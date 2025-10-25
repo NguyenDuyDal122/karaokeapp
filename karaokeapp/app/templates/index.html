@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng nhập KaraokeApp</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #007BFF, #00C6FF);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #007BFF;
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: #007BFF;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0,123,255,0.5);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-login {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .btn-login:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-register {
+            background-color: #28a745;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-register:hover {
+            background-color: #1e7e34;
+        }
+
+        .flash-messages {
+            margin-top: 15px;
+        }
+
+        .flash-messages li {
+            list-style: none;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .flash-messages .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .flash-messages .danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .flash-messages .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .flash-messages .info {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .bottom-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .bottom-text a {
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .bottom-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>🎵 Đăng nhập KaraokeApp 🎤</h2>
+        <form method="post">
+            <label>Tên đăng nhập:</label>
+            <input type="text" name="username" placeholder="Nhập tên đăng nhập..." required>
+
+            <label>Mật khẩu:</label>
+            <input type="password" name="password" placeholder="Nhập mật khẩu..." required>
+
+            <button type="submit" class="btn btn-login">Đăng nhập</button>
+        </form>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flash-messages">
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <div class="bottom-text">
+            <p>Chưa có tài khoản? <a href="{{ url_for('register') }}">Đăng ký ngay</a></p>
+        </div>
+    </div>
+</body>
+</html>
