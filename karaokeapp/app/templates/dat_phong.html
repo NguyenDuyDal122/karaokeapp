@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đặt phòng - {{ room.TenPhong }}</title>
+</head>
+<body>
+    <h2>Đặt phòng: {{ room.TenPhong }}</h2>
+    <p>Loại: {{ room.LoaiPhong }}</p>
+    <p>Giá/giờ: {{ room.GiaGio }} VNĐ</p>
+    <a href="{{ url_for('index') }}">⬅ Quay lại</a>
+</body>
+</html>

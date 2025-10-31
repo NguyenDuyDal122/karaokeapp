@@ -51,6 +51,7 @@ class PhongHat(db.Model):
     TenPhong = db.Column(db.String(50), nullable=False)
     SucChua = db.Column(db.Integer, nullable=False)
     GiaGio = db.Column(DECIMAL(10, 2), nullable=False)
+    LoaiPhong = db.Column(Enum('VIP', 'THUONG', name='loaiphong_enum'), default='THUONG', nullable=False)
     TrangThai = db.Column(Enum('TRONG', 'DANG_HAT', 'BAO_TRI', name='trangthaiphong_enum'), default='TRONG')
     HinhAnh = db.Column(db.String(255))
     MoTa = db.Column(db.String(255))

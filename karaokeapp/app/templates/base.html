@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Karaoke App{% endblock %}</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #00C6FF, #007BFF);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* --- Thanh điều hướng --- */
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 10px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .navbar-left h2 {
+            color: #007BFF;
+            margin: 0;
+        }
+
+        .navbar-left .welcome {
+            font-size: 15px;
+            color: #333;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .navbar-right a {
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        .navbar-right a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Thanh điều hướng -->
+<div class="navbar">
+    <div class="navbar-left">
+        <h2>🎤 Karaoke App</h2>
+        {% if session.user %}
+            <span class="welcome">👋 Xin chào, <b>{{ session.user }}</b></span>
+        {% endif %}
+    </div>
+
+    <div class="navbar-right">
+        {% if session.user %}
+            <a href="#">Thông tin tài khoản</a>
+            <a href="#">Lịch sử đặt</a>
+            <a href="{{ url_for('logout') }}">Đăng xuất</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Đăng nhập</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Nội dung trang -->
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
