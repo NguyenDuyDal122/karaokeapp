@@ -2,36 +2,80 @@
 {% block title %}{{ room.TenPhong }} | Karaoke App{% endblock %}
 
 {% block content %}
-<div style="width:80%; margin:40px auto; display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap;">
-    <img src="{{ url_for('static', filename=room.HinhAnh) }}" alt="{{ room.TenPhong }}"
-         style="width:400px; height:300px; object-fit:cover; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
 
-    <div style="flex:1;">
-        <h2 style="color:#007BFF; margin-bottom:15px;">{{ room.TenPhong }}</h2>
-        <p><strong>Loại phòng:</strong> {{ room.LoaiPhong }}</p>
-        <p><strong>Trạng thái:</strong>
-            {% if room.TrangThai == 'TRONG' %}
-                <span style="color:green;">Còn trống</span>
-            {% else %}
-                <span style="color:red;">Đã đặt</span>
-            {% endif %}
+<div style="width:80%; margin:40px auto; display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start;">
+
+    <!-- ẢNH PHÒNG -->
+    <div style="flex: 1; min-width:350px;">
+        <img src="{{ url_for('static', filename=room.HinhAnh) }}" alt="{{ room.TenPhong }}"
+             style="width:100%; height:320px; object-fit:cover; border-radius:12px;
+                    box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+    </div>
+
+    <!-- THÔNG TIN PHÒNG -->
+    <div style="flex: 1; min-width:350px;">
+        <h2 style="color:#007BFF; margin-bottom:20px; font-size:2rem; font-weight:700;">
+            {{ room.TenPhong }}
+        </h2>
+
+        <table style="width:100%; line-height:1.8; font-size:1.05rem;">
+            <tr>
+                <td><strong>Loại phòng</strong></td>
+                <td>
+                    {% if room.LoaiPhong == 'VIP' %}
+                        <span style="font-weight:600; color:gold;">✨ VIP</span>
+                    {% else %}
+                        <span style="font-weight:600; color:#007BFF;">Phòng thường</span>
+                    {% endif %}
+                </td>
+            </tr>
+
+            <tr>
+                <td><strong>Sức chứa</strong></td>
+                <td>{{ room.SucChua }} người</td>
+            </tr>
+
+            <tr>
+                <td><strong>Giá theo giờ</strong></td>
+                <td style="color:#28a745; font-weight:600;">{{ "{:,.0f}".format(room.GiaGio) }} VND/h</td>
+            </tr>
+
+            <tr>
+                <td><strong>Trạng thái</strong></td>
+                <td>
+                    {% if room.TrangThai == 'TRONG' %}
+                        <span style="color:green; font-weight:600;">🟢 Còn trống</span>
+                    {% elif room.TrangThai == 'DANG_HAT' %}
+                        <span style="color:red; font-weight:600;">🔴 Đang hát</span>
+                    {% elif room.TrangThai == 'BAO_TRI' %}
+                        <span style="color:orange; font-weight:600;">🛠️ Bảo trì</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <p style="margin-top:15px; font-size:1rem;">
+            <strong>Mô tả:</strong><br>
+            {{ room.MoTa or "Chưa có mô tả cho phòng này." }}
         </p>
-        <p><strong>Mô tả:</strong> {{ room.MoTa or "Chưa có mô tả." }}</p>
 
+        <!-- NÚT ĐẶT PHÒNG -->
         {% if room.TrangThai == 'TRONG' %}
             <a href="{{ url_for('dat_phong', ma_phong=room.MaPhong) }}"
-               style="display:inline-block; margin-top:20px; background-color:#28a745; color:white;
-                      padding:12px 20px; border-radius:8px; text-decoration:none;
-                      transition:background-color 0.3s;"
+               style="display:inline-block; margin-top:25px; background-color:#28a745;
+                      color:white; padding:14px 25px; border-radius:10px; text-decoration:none;
+                      font-size:1.1rem; font-weight:600; transition:0.3s;"
                onmouseover="this.style.backgroundColor='#218838';"
                onmouseout="this.style.backgroundColor='#28a745';">
                🏷️ Đặt phòng ngay
             </a>
         {% else %}
-            <button style="background-color: grey; color:white; padding:12px 20px; border-radius:8px; border:none; margin-top:20px;" disabled>
+            <button style="background-color: grey; color:white; padding:14px 25px; border-radius:10px;
+                           border:none; font-size:1.1rem; margin-top:25px;" disabled>
                 🚫 Không khả dụng
             </button>
         {% endif %}
     </div>
 </div>
+
 {% endblock %}

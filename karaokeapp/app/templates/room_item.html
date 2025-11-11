@@ -1,0 +1,35 @@
+<div class="room-card" style="
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    text-align: center;"
+    onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.15)';"
+    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)';">
+
+    <img src="{{ url_for('static', filename=room.HinhAnh) }}"
+         alt="{{ room.TenPhong }}"
+         style="width:100%; height:200px; object-fit:cover;">
+
+    <div style="padding:0px; display:flex; flex-direction:column; justify-content:space-between; height: 110px;">
+        <h3 style="color:#007BFF; margin-bottom:10px; font-weight:600;">{{ room.TenPhong }}</h3>
+
+        {% if room.TrangThai == 'TRONG' %}
+            <a href="{{ url_for('chi_tiet_phong', ma_phong=room.MaPhong) }}"
+               style="background-color:#007BFF;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+               🔍 Xem chi tiết
+            </a>
+
+        {% elif room.TrangThai == 'DANG_HAT' %}
+            <button style="background-color:#FF4D4D;color:white;padding:10px 20px;border-radius:8px;border:none;font-weight:600;" disabled>
+                🎤 Đang hát
+            </button>
+
+        {% elif room.TrangThai == 'BAO_TRI' %}
+            <button style="background-color:#6c757d;color:white;padding:10px 20px;border-radius:8px;border:none;font-weight:600;" disabled>
+                🔧 Bảo trì
+            </button>
+        {% endif %}
+    </div>
+</div>

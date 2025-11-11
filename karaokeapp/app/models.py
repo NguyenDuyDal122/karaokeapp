@@ -2,6 +2,7 @@ from sqlalchemy import Enum, DECIMAL, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app import db
+from decimal import Decimal
 
 class TaiKhoan(db.Model):
     __tablename__ = "tai_khoan"
@@ -20,7 +21,7 @@ class KhachHang(db.Model):
     __tablename__ = "khach_hang"
 
     MaKhachHang = db.Column(db.Integer, primary_key=True)
-    MaTaiKhoan = db.Column(db.Integer, ForeignKey("tai_khoan.MaTaiKhoan"), nullable=False)
+    MaTaiKhoan = db.Column(db.Integer, ForeignKey("tai_khoan.MaTaiKhoan"), nullable=True)
     HoTen = db.Column(db.String(100), nullable=False)
     SoDienThoai = db.Column(db.String(15), nullable=False)
     Email = db.Column(db.String(100))
@@ -89,7 +90,6 @@ class DichVu(db.Model):
 
     MaDichVu = db.Column(db.Integer, primary_key=True)
     TenDichVu = db.Column(db.String(100), nullable=False)
-    LoaiDichVu = db.Column(Enum('MON_AN', 'DO_UONG', 'KHAC', name='loaidichvu_enum'), nullable=False)
     DonGia = db.Column(DECIMAL(10, 2), nullable=False)
     HinhAnh = db.Column(db.String(255))
     MoTa = db.Column(db.String(255))
@@ -125,15 +125,17 @@ class HoaDon(db.Model):
     VAT = db.Column(DECIMAL(5, 2), default=10.00)
     TongTien = db.Column(DECIMAL(10, 2), default=0.00)
     PhuongThucThanhToan = db.Column(
-        Enum('TIEN_MAT', 'CHUYEN_KHOAN', 'THE_NGAN_HANG', 'VI_DIEN_TU', name='thanhtoan_enum'),
+        Enum('TIEN_MAT', 'CHUYEN_KHOAN', name='thanhtoan_enum'),
         nullable=False
     )
-    MaNhanVien = db.Column(db.Integer, ForeignKey("nhan_vien.MaNhanVien"))
+    Nguon = db.Column(Enum('ONLINE', 'QUAY', name='nguon_hoa_don_enum'), default='ONLINE')
+    MaNhanVien = db.Column(db.Integer, ForeignKey("nhan_vien.MaNhanVien"), nullable=True)
 
     dat_phong = relationship("DatPhong", back_populates="hoa_don")
     nhan_vien = relationship("NhanVien", back_populates="hoa_don")
 
     def tinh_tong_tien(self):
-        tong = float(self.TienPhong or 0) + float(self.TienDichVu or 0)
-        tong_co_vat = tong + tong * float(self.VAT) / 100
+        tong = (self.TienPhong or Decimal('0')) + (self.TienDichVu or Decimal('0'))
+        vat = self.VAT or Decimal('10.0')
+        tong_co_vat = tong + tong * vat / Decimal('100')
         self.TongTien = tong_co_vat

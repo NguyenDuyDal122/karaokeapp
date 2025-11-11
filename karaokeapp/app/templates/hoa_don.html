@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Hóa đơn - {{ hoa_don.dat_phong.phong.TenPhong }}{% endblock %}
+
+{% block content %}
+<style>
+    .invoice {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        border-radius: 12px;
+        background: #f8f9fa;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        font-family: "Segoe UI", sans-serif;
+    }
+    h2 { color: #007BFF; text-align: center; margin-bottom: 20px; }
+    .invoice table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .invoice th, .invoice td {
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        text-align: left;
+    }
+    .invoice th {
+        background-color: #007BFF;
+        color: white;
+    }
+    .total {
+        font-weight: bold;
+        text-align: right;
+    }
+    .back-btn {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 10px 20px;
+        background: #007BFF;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+    }
+    .back-btn:hover {
+        background: #0056b3;
+    }
+</style>
+
+<div class="invoice">
+    <h2>🎫 HÓA ĐƠN ĐẶT PHÒNG</h2>
+
+    <p><strong>Phòng:</strong> {{ hoa_don.dat_phong.phong.TenPhong }}</p>
+    <p><strong>Khách hàng:</strong> {{ hoa_don.dat_phong.khach_hang.HoTen }}</p>
+    <p><strong>Ngày lập:</strong> {{ hoa_don.NgayLap.strftime("%d/%m/%Y %H:%M") }}</p>
+    <p><strong>Thời gian:</strong> {{ hoa_don.dat_phong.ThoiGianBatDau.strftime("%H:%M") }} - {{ hoa_don.dat_phong.ThoiGianKetThuc.strftime("%H:%M") }}</p>
+    <p><strong>Số người:</strong> {{ hoa_don.dat_phong.SoNguoi }}</p>
+    <p><strong>Phương thức thanh toán:</strong> {{ hoa_don.PhuongThucThanhToan.replace('_', ' ').title() }}</p>
+    <p><strong>Nguồn:</strong> {{ hoa_don.Nguon }}</p>
+    {% if hoa_don.nhan_vien %}
+        <p><strong>Nhân viên phụ trách:</strong> {{ hoa_don.nhan_vien.HoTen }} ({{ hoa_don.nhan_vien.ChucVu }})</p>
+    {% endif %}
+
+    <h3>DỊCH VỤ ĐÃ ĐẶT</h3>
+    {% if chi_tiet_dv %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tên dịch vụ</th>
+                <th>Số lượng</th>
+                <th>Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ct in chi_tiet_dv %}
+            <tr>
+                <td>{{ ct.dich_vu.TenDichVu }}</td>
+                <td>{{ ct.SoLuong }}</td>
+                <td>{{ "{:,.0f}".format(ct.ThanhTien) }}đ</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>Chưa có dịch vụ nào được đặt.</p>
+    {% endif %}
+
+    <table>
+        <tr>
+            <td class="total">Tiền phòng:</td>
+            <td>{{ "{:,.0f}".format(hoa_don.TienPhong) }}đ</td>
+        </tr>
+        <tr>
+            <td class="total">Tiền dịch vụ:</td>
+            <td>{{ "{:,.0f}".format(hoa_don.TienDichVu) }}đ</td>
+        </tr>
+        <tr>
+            <td class="total">VAT ({{ hoa_don.VAT }}%):</td>
+            <td>{{ "{:,.0f}".format((hoa_don.TienPhong + hoa_don.TienDichVu) * hoa_don.VAT / 100) }}đ</td>
+        </tr>
+        <tr>
+            <td class="total">TỔNG CỘNG:</td>
+            <td>{{ "{:,.0f}".format(hoa_don.TongTien) }}đ</td>
+        </tr>
+    </table>
+
+    <a href="{{ url_for('index') }}" class="back-btn">⬅ Quay lại trang chủ</a>
+</div>
+{% endblock %}

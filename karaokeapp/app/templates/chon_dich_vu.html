@@ -1,0 +1,12 @@
+<h2>Chọn dịch vụ cho phòng</h2>
+<form method="post">
+    {% for dv in services %}
+        <div>
+            <input type="checkbox" name="dich_vu" value="{{ dv.MaDichVu }}"
+            {% if dv.MaDichVu in selected_ids %}checked{% endif %}>
+            {{ dv.TenDichVu }} ({{ dv.DonGia }}đ)
+        </div>
+    {% endfor %}
+    <button type="submit">➕ Thêm dịch vụ</button>
+</form>
+<a href="{{ url_for('dat_phong', ma_phong=ma_phong) }}">⬅ Quay lại đặt phòng</a>

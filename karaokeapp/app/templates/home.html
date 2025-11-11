@@ -2,12 +2,43 @@
 {% block title %}Danh sách phòng | Karaoke App{% endblock %}
 
 {% block content %}
+
+{% if rooms_vip or rooms_thuong %}
+
 <div style="text-align:center; margin-top: 30px;">
     <h1 style="color:#007BFF; font-weight:700; font-size:2rem;">
-        🎶 Danh sách phòng Karaoke 🎶
+        🎤 Danh sách phòng Karaoke
     </h1>
     <p style="color:#555;">Chọn phòng yêu thích của bạn để xem chi tiết và đặt ngay!</p>
+
+    <!-- ===== Nút chọn nhanh loại phòng ===== -->
+    <div style="margin-top: 20px;">
+        <a href="#vip-section" style="
+            background-color:gold;
+            padding:10px 20px;
+            border-radius:8px;
+            text-decoration:none;
+            margin-right:10px;
+            font-weight:600;
+        ">✨ Phòng VIP</a>
+
+        <a href="#normal-section" style="
+            background-color:#007BFF;
+            padding:10px 20px;
+            border-radius:8px;
+            text-decoration:none;
+            color:white;
+            font-weight:600;
+        ">Phòng Thường</a>
+    </div>
 </div>
+
+<hr style="width:90%; margin: 40px auto;">
+
+
+<!-- ================= PHÒNG VIP ================= -->
+{% if rooms_vip %}
+<h2 id="vip-section" style="text-align:center; color:gold; font-size: 1.9rem; font-weight:700;">✨ Phòng VIP ✨</h2>
 
 <div class="room-grid" style="
     display: grid;
@@ -16,58 +47,37 @@
     margin: 40px auto;
     width: 90%;
 ">
-    {% for room in rooms %}
-    <div class="room-card" style="
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-        overflow: hidden;
-        transition: all 0.3s ease;
-        position: relative;
-        text-align: center;
-    "
-    onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.15)';"
-    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.08)';">
-
-        <img src="{{ url_for('static', filename=room.HinhAnh) }}"
-             alt="{{ room.TenPhong }}"
-             style="width:100%; height:200px; object-fit:cover;">
-
-        <div style="padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-            <h3 style="color:#007BFF; margin-bottom:10px; font-weight:600;">{{ room.TenPhong }}</h3>
-            <p style="color:#666; margin-bottom:15px; font-size:15px;">
-                Loại phòng: <strong>{{ room.LoaiPhong }}</strong>
-            </p>
-
-            {% if room.TrangThai == 'TRONG' %}
-                <a href="{{ url_for('chi_tiet_phong', ma_phong=room.MaPhong) }}"
-                   style="
-                       display:inline-block;
-                       background-color:#007BFF;
-                       color:white;
-                       padding:10px 20px;
-                       border-radius:8px;
-                       text-decoration:none;
-                       font-weight:500;
-                       transition: background-color 0.3s ease, transform 0.2s ease;
-                   "
-                   onmouseover="this.style.backgroundColor='#0056b3'; this.style.transform='scale(1.05)';"
-                   onmouseout="this.style.backgroundColor='#007BFF'; this.style.transform='scale(1)';">
-                   🔍 Xem chi tiết
-                </a>
-            {% else %}
-                <button style="
-                    background-color: grey;
-                    color:white;
-                    padding:10px 20px;
-                    border-radius:8px;
-                    border:none;
-                    cursor: not-allowed;
-                    font-weight:500;
-                ">🚫 Không khả dụng</button>
-            {% endif %}
-        </div>
-    </div>
+    {% for room in rooms_vip %}
+        {% include "room_item.html" %}
     {% endfor %}
 </div>
+{% endif %}
+
+<hr style="width:90%; margin: 40px auto;">
+
+
+<!-- ================= PHÒNG THƯỜNG ================= -->
+{% if rooms_thuong %}
+<h2 id="normal-section" style="text-align:center; color:#007BFF; font-size: 1.9rem; font-weight:700;">Phòng thường</h2>
+
+<div class="room-grid" style="
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 30px;
+    margin: 40px auto;
+    width: 90%;
+">
+    {% for room in rooms_thuong %}
+        {% include "room_item.html" %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<div style="text-align:center; margin-top: 50px;">
+    <h1 style="color:#007BFF; font-weight:700;">Chào mừng đến Karaoke App 🎤</h1>
+    <p>Chọn mục <strong>Danh sách phòng</strong> trên menu để xem các phòng hiện có.</p>
+</div>
+{% endif %}
+
 {% endblock %}

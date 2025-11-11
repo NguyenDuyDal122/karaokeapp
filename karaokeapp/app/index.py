@@ -1,14 +1,18 @@
+from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session
-from app import app, dao
+from app import app, dao, db
+from app.models import PhongHat, ChiTietDatDichVu, HoaDon, DatPhong, DichVu, KhachHang, TaiKhoan, NhanVien
+from werkzeug.security import generate_password_hash
+from decimal import Decimal
 
 
-# --- Trang chủ ---
 @app.route("/")
 def index():
-    from app import dao
-    rooms = dao.get_all_phong_hat()
-    return render_template("home.html", rooms=rooms)
-
+    rooms_vip = PhongHat.query.filter_by(LoaiPhong='VIP').all()
+    rooms_thuong = PhongHat.query.filter_by(LoaiPhong='THUONG').all()
+    return render_template("home.html",
+                           rooms_vip=rooms_vip,
+                           rooms_thuong=rooms_thuong)
 
 # --- Trang đăng nhập ---
 @app.route("/login", methods=["GET", "POST"])
@@ -23,9 +27,15 @@ def login():
             session["user"] = user.TenDangNhap
             session["role"] = user.VaiTro
 
+            # Lấy MaKhachHang từ user.khach_hang
+            if user.khach_hang:  # kiểm tra có tồn tại KhachHang không
+                session["user_id"] = user.khach_hang.MaKhachHang
+            else:
+                session["user_id"] = None  # hoặc xử lý báo lỗi nếu chưa có KhachHang
+
             flash(f"🎉 Chào mừng {user.TenDangNhap} ({user.VaiTro}) đăng nhập thành công!", "success")
 
-            # 🔹 Phân quyền điều hướng
+            # Phân quyền điều hướng
             if user.VaiTro.lower() == "khachhang":
                 return redirect(url_for("index"))
             elif user.VaiTro.lower() == "nhanvien":
@@ -38,9 +48,57 @@ def login():
         else:
             flash("❌ Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khóa!", "danger")
 
-    # GET → hiển thị form đăng nhập
     return render_template("index.html")
 
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        hoten = request.form.get("hoten")
+        sdt = request.form.get("sdt")
+        email = request.form.get("email")
+
+        # ✅ Kiểm tra tài khoản đã tồn tại chưa
+        exist = TaiKhoan.query.filter_by(TenDangNhap=username).first()
+        if exist:
+            flash("❌ Tên đăng nhập đã tồn tại!", "danger")
+            return redirect(url_for("register"))
+
+        # ✅ Băm mật khẩu trước khi lưu (quan trọng)
+        hashed_password = generate_password_hash(password)
+
+        tai_khoan = TaiKhoan(
+            TenDangNhap=username,
+            MatKhau=hashed_password,  # ✅ Lưu password dạng hash
+            VaiTro="KHACHHANG",
+            TrangThai=True
+        )
+
+        db.session.add(tai_khoan)
+        db.session.commit()  # Để có MaTaiKhoan trước khi tạo KhachHang
+
+        # ✅ Tạo khách hàng liên kết với tài khoản
+        kh = KhachHang(
+            MaTaiKhoan=tai_khoan.MaTaiKhoan,
+            HoTen=hoten,
+            SoDienThoai=sdt,
+            Email=email
+        )
+
+        db.session.add(kh)
+        db.session.commit()
+
+        flash("✅ Đăng ký thành công! Hãy đăng nhập.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+# --- Đăng xuất ---
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
 
 # --- Trang của nhân viên ---
 @app.route("/staff")
@@ -81,33 +139,95 @@ def dashboard():
         <a href='/logout'>Đăng xuất</a>
     """
 
-
-# --- Đăng xuất ---
-@app.route("/logout")
-def logout():
-    session.clear()
-    flash("✅ Bạn đã đăng xuất thành công!", "info")
-    return redirect(url_for("index"))
-
-
-# --- Trang đăng ký (tạm thời) ---
-@app.route("/register")
-def register():
-    return "<h3>Trang đăng ký đang được phát triển...</h3>"
-
-@app.route("/dat-phong/<int:ma_phong>")
+@app.route("/dat-phong/<int:ma_phong>", methods=["GET", "POST"])
 def dat_phong(ma_phong):
     if "user" not in session or session["role"].lower() != "khachhang":
-        flash("⚠️ Bạn cần đăng nhập bằng tài khoản khách hàng để đặt phòng!", "warning")
         return redirect(url_for("login"))
 
-    from app.models import PhongHat
     room = PhongHat.query.get(ma_phong)
-    if not room:
-        flash("❌ Không tìm thấy phòng!", "danger")
-        return redirect(url_for("index"))
+    selected_ids = session.get("selected_services", [])
+    selected_services = DichVu.query.filter(DichVu.MaDichVu.in_(selected_ids)).all()
 
-    return render_template("dat_phong.html", room=room)
+    if request.method == "POST":
+        ngay_dat = request.form["ngay_dat"]
+        gio_bat_dau = request.form["gio_bat_dau"]
+        gio_ket_thuc = request.form["gio_ket_thuc"]
+        so_nguoi = int(request.form["so_nguoi"])
+
+        thoi_gian_bd = datetime.strptime(f"{ngay_dat} {gio_bat_dau}", "%Y-%m-%d %H:%M")
+        thoi_gian_kt = datetime.strptime(f"{ngay_dat} {gio_ket_thuc}", "%Y-%m-%d %H:%M")
+
+        # Kiểm tra giờ hợp lệ
+        if thoi_gian_kt <= thoi_gian_bd:
+            flash("❌ Giờ kết thúc phải lớn hơn giờ bắt đầu!", "danger")
+            return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+        # Kiểm tra trùng lịch
+        xung_dot = DatPhong.query.filter(
+            DatPhong.MaPhong == ma_phong,
+            DatPhong.ThoiGianBatDau < thoi_gian_kt,
+            DatPhong.ThoiGianKetThuc > thoi_gian_bd
+        ).first()
+
+        if xung_dot:
+            flash("❌ Khung giờ này đã có người đặt!", "danger")
+            return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+        khach_hang_id = session.get("user_id")
+        if not khach_hang_id:
+            flash("Không xác định được khách hàng!", "danger")
+            return redirect(url_for("login"))
+
+        # Tạo DatPhong
+        dp = DatPhong(
+            MaKhachHang=khach_hang_id,
+            MaPhong=ma_phong,
+            ThoiGianBatDau=thoi_gian_bd,
+            ThoiGianKetThuc=thoi_gian_kt,
+            SoNguoi=so_nguoi
+        )
+        db.session.add(dp)
+        db.session.commit()
+
+        # Thêm chi tiết dịch vụ nếu có
+        if selected_services:
+            for dv in selected_services:
+                db.session.add(ChiTietDatDichVu(
+                    MaDatPhong=dp.MaDatPhong,
+                    MaDichVu=dv.MaDichVu,
+                    SoLuong=1,
+                    ThanhTien=Decimal(dv.DonGia)
+                ))
+
+        # Tính số giờ
+        so_gio = Decimal((thoi_gian_kt - thoi_gian_bd).seconds) / Decimal(3600)
+
+        # Tính tiền dịch vụ (0 nếu không có)
+        tien_dich_vu = sum(Decimal(dv.DonGia) for dv in selected_services) if selected_services else Decimal('0')
+
+        # Lấy mã nhân viên admin
+        admin_nv = NhanVien.query.filter_by(ChucVu='ADMIN').first()
+        ma_nhan_vien = admin_nv.MaNhanVien if admin_nv else None
+
+        # tạo hóa đơn
+        hoa_don = HoaDon(
+            MaDatPhong=dp.MaDatPhong,
+            TienPhong=Decimal(room.GiaGio) * so_gio,
+            TienDichVu=tien_dich_vu,
+            PhuongThucThanhToan='TIEN_MAT',
+            Nguon='ONLINE',
+            MaNhanVien=ma_nhan_vien
+        )
+        hoa_don.tinh_tong_tien()
+        db.session.add(hoa_don)
+
+        db.session.commit()
+        session.pop("selected_services", None)
+
+        flash("✅ Đặt phòng thành công!", "success")
+        return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+    return render_template("dat_phong.html", room=room, selected_services=selected_services)
 
 @app.route("/phong/<int:ma_phong>")
 def chi_tiet_phong(ma_phong):
@@ -118,4 +238,34 @@ def chi_tiet_phong(ma_phong):
         return "Không tìm thấy phòng", 404
 
     return render_template("chi_tiet_phong.html", room=room)
+
+@app.route("/dat-phong/<int:ma_phong>/them-dich-vu", methods=["GET", "POST"])
+def them_dich_vu(ma_phong):
+    from app.models import DichVu
+    services = DichVu.query.all()
+
+    # Lấy danh sách dịch vụ đã chọn từ session
+    selected_ids = session.get("selected_services", [])
+
+    if request.method == "POST":
+        form_services = request.form.getlist("dich_vu")
+        selected_ids = list(map(int, form_services))
+        session["selected_services"] = selected_ids
+        flash("✅ Dịch vụ đã được thêm!", "success")
+        return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+    # Truyền ma_phong vào template để quay lại
+    return render_template(
+        "chon_dich_vu.html",
+        services=services,
+        selected_ids=selected_ids,
+        ma_phong=ma_phong  # <--- thêm dòng này
+    )
+
+@app.route("/hoa-don/<int:ma_hoa_don>")
+def xem_hoa_don(ma_hoa_don):
+    hoa_don = HoaDon.query.get_or_404(ma_hoa_don)
+    chi_tiet_dv = ChiTietDatDichVu.query.filter_by(MaDatPhong=hoa_don.MaDatPhong).all()
+    return render_template("hoa_don.html", hoa_don=hoa_don, chi_tiet_dv=chi_tiet_dv)
+
 
