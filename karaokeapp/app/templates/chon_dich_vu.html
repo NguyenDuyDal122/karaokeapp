@@ -1,12 +1,129 @@
-<h2>Chọn dịch vụ cho phòng</h2>
-<form method="post">
-    {% for dv in services %}
-        <div>
-            <input type="checkbox" name="dich_vu" value="{{ dv.MaDichVu }}"
-            {% if dv.MaDichVu in selected_ids %}checked{% endif %}>
-            {{ dv.TenDichVu }} ({{ dv.DonGia }}đ)
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chọn dịch vụ</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #00C6FF, #007BFF);
+            color: #333;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #007BFF;
+            margin-bottom: 25px;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .service-item:last-child {
+            border-bottom: none;
+        }
+
+        input[type="checkbox"] {
+            transform: scale(1.3);
+            margin-right: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            background: #007BFF;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🛎️ Chọn dịch vụ cho phòng</h2>
+    <form method="post">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+            {% for dv in services %}
+            <div style="border: 1px solid #ccc; border-radius: 10px; padding: 10px; background: #f9f9f9;">
+                {% if dv.HinhAnh %}
+                <img src="{{ url_for('static', filename=dv.HinhAnh) }}" alt="{{ dv.TenDichVu }}"
+                     style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+                {% endif %}
+
+                <h4>{{ dv.TenDichVu }}</h4>
+                <p>{{ dv.MoTa or '' }}</p>
+                <p><b>{{ dv.DonGia }}đ</b></p>
+
+                <div>
+                    <input type="checkbox" name="dich_vu" value="{{ dv.MaDichVu }}"
+                           id="dv_{{ dv.MaDichVu }}"
+                           {% if dv.MaDichVu in selected_ids %}checked{% endif %}
+                           onchange="toggleSoLuong({{ dv.MaDichVu }})">
+                    <label for="dv_{{ dv.MaDichVu }}">Chọn dịch vụ</label>
+                </div>
+
+                <div id="soluong_{{ dv.MaDichVu }}"
+                     style="margin-top: 5px; {% if dv.MaDichVu not in selected_ids %}display:none;{% endif %}">
+                    <label for="qty_{{ dv.MaDichVu }}">Số lượng:</label>
+                    <input type="number" name="soluong_{{ dv.MaDichVu }}"
+                           id="qty_{{ dv.MaDichVu }}"
+                           min="1"
+                           value="{% set found = False %}{% for item in selected_services %}{% if item['id'] == dv.MaDichVu %}{{ item['so_luong'] }}{% set found = True %}{% endif %}{% endfor %}{% if not found %}1{% endif %}"
+                           style="width: 60px;">
+                </div>
+            </div>
+            {% endfor %}
         </div>
-    {% endfor %}
-    <button type="submit">➕ Thêm dịch vụ</button>
-</form>
-<a href="{{ url_for('dat_phong', ma_phong=ma_phong) }}">⬅ Quay lại đặt phòng</a>
+
+        <button type="submit" style="margin-top: 15px;">➕ Thêm dịch vụ</button>
+    </form>
+
+    <a href="{{ url_for('dat_phong', ma_phong=ma_phong) }}">⬅ Quay lại đặt phòng</a>
+
+    <script>
+        function toggleSoLuong(id) {
+            const checkbox = document.getElementById("dv_" + id);
+            const qtyDiv = document.getElementById("soluong_" + id);
+            qtyDiv.style.display = checkbox.checked ? "block" : "none";
+        }
+    </script>
+</div>
+</body>
+</html>

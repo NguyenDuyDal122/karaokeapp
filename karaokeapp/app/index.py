@@ -139,96 +139,6 @@ def dashboard():
         <a href='/logout'>Đăng xuất</a>
     """
 
-@app.route("/dat-phong/<int:ma_phong>", methods=["GET", "POST"])
-def dat_phong(ma_phong):
-    if "user" not in session or session["role"].lower() != "khachhang":
-        return redirect(url_for("login"))
-
-    room = PhongHat.query.get(ma_phong)
-    selected_ids = session.get("selected_services", [])
-    selected_services = DichVu.query.filter(DichVu.MaDichVu.in_(selected_ids)).all()
-
-    if request.method == "POST":
-        ngay_dat = request.form["ngay_dat"]
-        gio_bat_dau = request.form["gio_bat_dau"]
-        gio_ket_thuc = request.form["gio_ket_thuc"]
-        so_nguoi = int(request.form["so_nguoi"])
-
-        thoi_gian_bd = datetime.strptime(f"{ngay_dat} {gio_bat_dau}", "%Y-%m-%d %H:%M")
-        thoi_gian_kt = datetime.strptime(f"{ngay_dat} {gio_ket_thuc}", "%Y-%m-%d %H:%M")
-
-        # Kiểm tra giờ hợp lệ
-        if thoi_gian_kt <= thoi_gian_bd:
-            flash("❌ Giờ kết thúc phải lớn hơn giờ bắt đầu!", "danger")
-            return redirect(url_for("dat_phong", ma_phong=ma_phong))
-
-        # Kiểm tra trùng lịch
-        xung_dot = DatPhong.query.filter(
-            DatPhong.MaPhong == ma_phong,
-            DatPhong.ThoiGianBatDau < thoi_gian_kt,
-            DatPhong.ThoiGianKetThuc > thoi_gian_bd
-        ).first()
-
-        if xung_dot:
-            flash("❌ Khung giờ này đã có người đặt!", "danger")
-            return redirect(url_for("dat_phong", ma_phong=ma_phong))
-
-        khach_hang_id = session.get("user_id")
-        if not khach_hang_id:
-            flash("Không xác định được khách hàng!", "danger")
-            return redirect(url_for("login"))
-
-        # Tạo DatPhong
-        dp = DatPhong(
-            MaKhachHang=khach_hang_id,
-            MaPhong=ma_phong,
-            ThoiGianBatDau=thoi_gian_bd,
-            ThoiGianKetThuc=thoi_gian_kt,
-            SoNguoi=so_nguoi
-        )
-        db.session.add(dp)
-        db.session.commit()
-
-        # Thêm chi tiết dịch vụ nếu có
-        if selected_services:
-            for dv in selected_services:
-                db.session.add(ChiTietDatDichVu(
-                    MaDatPhong=dp.MaDatPhong,
-                    MaDichVu=dv.MaDichVu,
-                    SoLuong=1,
-                    ThanhTien=Decimal(dv.DonGia)
-                ))
-
-        # Tính số giờ
-        so_gio = Decimal((thoi_gian_kt - thoi_gian_bd).seconds) / Decimal(3600)
-
-        # Tính tiền dịch vụ (0 nếu không có)
-        tien_dich_vu = sum(Decimal(dv.DonGia) for dv in selected_services) if selected_services else Decimal('0')
-
-        # Lấy mã nhân viên admin
-        admin_nv = NhanVien.query.filter_by(ChucVu='ADMIN').first()
-        ma_nhan_vien = admin_nv.MaNhanVien if admin_nv else None
-
-        # tạo hóa đơn
-        hoa_don = HoaDon(
-            MaDatPhong=dp.MaDatPhong,
-            TienPhong=Decimal(room.GiaGio) * so_gio,
-            TienDichVu=tien_dich_vu,
-            PhuongThucThanhToan='TIEN_MAT',
-            Nguon='ONLINE',
-            MaNhanVien=ma_nhan_vien
-        )
-        hoa_don.tinh_tong_tien()
-        db.session.add(hoa_don)
-
-        db.session.commit()
-        session.pop("selected_services", None)
-
-        flash("✅ Đặt phòng thành công!", "success")
-        return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
-
-    return render_template("dat_phong.html", room=room, selected_services=selected_services)
-
 @app.route("/phong/<int:ma_phong>")
 def chi_tiet_phong(ma_phong):
     from app.models import PhongHat
@@ -239,27 +149,174 @@ def chi_tiet_phong(ma_phong):
 
     return render_template("chi_tiet_phong.html", room=room)
 
-@app.route("/dat-phong/<int:ma_phong>/them-dich-vu", methods=["GET", "POST"])
-def them_dich_vu(ma_phong):
-    from app.models import DichVu
-    services = DichVu.query.all()
+@app.route("/dat-phong/<int:ma_phong>", methods=["GET", "POST"])
+def dat_phong(ma_phong):
+    # Kiểm tra đăng nhập và vai trò
+    if "user" not in session or session["role"].lower() != "khachhang":
+        flash("Vui lòng đăng nhập bằng tài khoản khách hàng để đặt phòng.", "warning")
+        return redirect(url_for("login"))
+
+    room = PhongHat.query.get_or_404(ma_phong)
 
     # Lấy danh sách dịch vụ đã chọn từ session
-    selected_ids = session.get("selected_services", [])
+    selected_services_data = session.get("selected_services", [])
+    selected_ids = [item["id"] for item in selected_services_data]
+    selected_services = DichVu.query.filter(DichVu.MaDichVu.in_(selected_ids)).all()
+
+    # Lấy dữ liệu tạm từ session (ngày, giờ, số người)
+    dat_phong_info = session.get("dat_phong_info", {})
 
     if request.method == "POST":
+        if "them_dich_vu" in request.form:
+            # Lưu thông tin tạm vào session và chuyển sang chọn dịch vụ
+            session["dat_phong_info"] = {
+                "ngay_dat": request.form.get("ngay_dat"),
+                "gio_bat_dau": request.form.get("gio_bat_dau"),
+                "gio_ket_thuc": request.form.get("gio_ket_thuc"),
+                "so_nguoi": request.form.get("so_nguoi"),
+            }
+            return redirect(url_for("them_dich_vu", ma_phong=ma_phong))
+
+        elif "thanh_toan" in request.form:
+            # --- Lấy thông tin đặt phòng ---
+            try:
+                ngay_dat = request.form["ngay_dat"]
+                gio_bat_dau = request.form["gio_bat_dau"]
+                gio_ket_thuc = request.form["gio_ket_thuc"]
+                so_nguoi = int(request.form["so_nguoi"])
+            except (KeyError, ValueError):
+                flash("Vui lòng nhập đầy đủ thông tin hợp lệ!", "danger")
+                return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+            # --- Gộp ngày và giờ ---
+            thoi_gian_bd = datetime.strptime(f"{ngay_dat} {gio_bat_dau}", "%Y-%m-%d %H:%M")
+            thoi_gian_kt = datetime.strptime(f"{ngay_dat} {gio_ket_thuc}", "%Y-%m-%d %H:%M")
+
+            if thoi_gian_kt <= thoi_gian_bd:
+                flash("❌ Giờ kết thúc phải lớn hơn giờ bắt đầu!", "danger")
+                return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+            # --- Kiểm tra trùng khung giờ ---
+            xung_dot = DatPhong.query.filter(
+                DatPhong.MaPhong == ma_phong,
+                DatPhong.ThoiGianBatDau < thoi_gian_kt,
+                DatPhong.ThoiGianKetThuc > thoi_gian_bd
+            ).first()
+            if xung_dot:
+                flash("❌ Phòng này đã có người đặt trong khung giờ bạn chọn! Vui lòng chọn thời gian khác.", "danger")
+                return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+            # --- Lấy số lượng dịch vụ từ form ---
+            so_luong_map = {}
+            for dv in selected_services:
+                key = f"soluong_{dv.MaDichVu}"
+                try:
+                    so_luong_map[dv.MaDichVu] = int(request.form.get(key, 1))
+                    if so_luong_map[dv.MaDichVu] < 1:
+                        so_luong_map[dv.MaDichVu] = 1
+                except ValueError:
+                    so_luong_map[dv.MaDichVu] = 1
+
+            # --- Lưu DatPhong ---
+            khach_hang_id = session.get("user_id")
+            if not khach_hang_id:
+                flash("Không xác định được khách hàng!", "danger")
+                return redirect(url_for("login"))
+
+            dp = DatPhong(
+                MaKhachHang=khach_hang_id,
+                MaPhong=ma_phong,
+                ThoiGianBatDau=thoi_gian_bd,
+                ThoiGianKetThuc=thoi_gian_kt,
+                SoNguoi=so_nguoi
+            )
+            db.session.add(dp)
+            db.session.commit()
+
+            # --- Thêm chi tiết dịch vụ ---
+            for dv in selected_services:
+                # Lấy số lượng từ session
+                item = next((x for x in selected_services_data if x['id'] == dv.MaDichVu), None)
+                so_luong = item['so_luong'] if item else 1
+
+                ctdv = ChiTietDatDichVu(
+                    MaDatPhong=dp.MaDatPhong,
+                    MaDichVu=dv.MaDichVu,
+                    SoLuong=so_luong,
+                    ThanhTien=Decimal(dv.DonGia) * so_luong
+                )
+                db.session.add(ctdv)
+
+            db.session.commit()
+
+            # --- Tính tiền ---
+            so_gio = Decimal((thoi_gian_kt - thoi_gian_bd).seconds) / Decimal(3600)
+            tien_dich_vu = sum(ct.ThanhTien for ct in dp.chi_tiet_dv)
+
+            admin_nv = NhanVien.query.filter_by(ChucVu='ADMIN').first()
+            ma_nhan_vien = admin_nv.MaNhanVien if admin_nv else None
+
+            hoa_don = HoaDon(
+                MaDatPhong=dp.MaDatPhong,
+                TienPhong=Decimal(room.GiaGio) * so_gio,
+                TienDichVu=tien_dich_vu,
+                PhuongThucThanhToan='TIEN_MAT',
+                Nguon='ONLINE',
+                MaNhanVien=ma_nhan_vien
+            )
+            hoa_don.tinh_tong_tien()
+            db.session.add(hoa_don)
+            db.session.commit()
+
+            # --- Dọn session ---
+            session.pop("selected_services", None)
+            session.pop("dat_phong_info", None)
+
+            return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+    # Nếu là GET: render giao diện
+    return render_template(
+        "dat_phong.html",
+        room=room,
+        selected_services=selected_services,
+        selected_services_data=selected_services_data,
+        dat_phong_info=dat_phong_info
+    )
+
+@app.route("/dat-phong/<int:ma_phong>/them-dich-vu", methods=["GET", "POST"])
+def them_dich_vu(ma_phong):
+    # Lấy toàn bộ dịch vụ từ CSDL
+    services = DichVu.query.all()
+
+    # Lấy danh sách dịch vụ đã chọn từ session (dạng list chứa dict)
+    selected_services = session.get("selected_services", [])
+
+    if request.method == "POST":
+        selected_list = []
+
+        # Lấy danh sách các dịch vụ được chọn từ form
         form_services = request.form.getlist("dich_vu")
-        selected_ids = list(map(int, form_services))
-        session["selected_services"] = selected_ids
-        flash("✅ Dịch vụ đã được thêm!", "success")
+
+        for ma_dv in form_services:
+            so_luong_key = f"soluong_{ma_dv}"
+            so_luong = int(request.form.get(so_luong_key, 1))
+            selected_list.append({"id": int(ma_dv), "so_luong": so_luong})
+
+        # Lưu vào session
+        session["selected_services"] = selected_list
+
+        flash("✅ Dịch vụ đã được thêm vào đơn đặt phòng!", "success")
         return redirect(url_for("dat_phong", ma_phong=ma_phong))
 
-    # Truyền ma_phong vào template để quay lại
+    # Chuẩn bị danh sách ID dịch vụ đã chọn để đánh dấu checked
+    selected_ids = [item["id"] for item in selected_services]
+
     return render_template(
         "chon_dich_vu.html",
         services=services,
         selected_ids=selected_ids,
-        ma_phong=ma_phong  # <--- thêm dòng này
+        selected_services=selected_services,  # thêm dòng này
+        ma_phong=ma_phong
     )
 
 @app.route("/hoa-don/<int:ma_hoa_don>")

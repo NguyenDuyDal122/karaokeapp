@@ -52,36 +52,39 @@
     <p><strong>Phòng:</strong> {{ hoa_don.dat_phong.phong.TenPhong }}</p>
     <p><strong>Khách hàng:</strong> {{ hoa_don.dat_phong.khach_hang.HoTen }}</p>
     <p><strong>Ngày lập:</strong> {{ hoa_don.NgayLap.strftime("%d/%m/%Y %H:%M") }}</p>
-    <p><strong>Thời gian:</strong> {{ hoa_don.dat_phong.ThoiGianBatDau.strftime("%H:%M") }} - {{ hoa_don.dat_phong.ThoiGianKetThuc.strftime("%H:%M") }}</p>
+    <p><strong>Thời gian:</strong>
+        {{ hoa_don.dat_phong.ThoiGianBatDau.strftime("%d/%m/%Y %H:%M") }} -
+        {{ hoa_don.dat_phong.ThoiGianKetThuc.strftime("%d/%m/%Y %H:%M") }}
+    </p>
     <p><strong>Số người:</strong> {{ hoa_don.dat_phong.SoNguoi }}</p>
     <p><strong>Phương thức thanh toán:</strong> {{ hoa_don.PhuongThucThanhToan.replace('_', ' ').title() }}</p>
     <p><strong>Nguồn:</strong> {{ hoa_don.Nguon }}</p>
     {% if hoa_don.nhan_vien %}
-        <p><strong>Nhân viên phụ trách:</strong> {{ hoa_don.nhan_vien.HoTen }} ({{ hoa_don.nhan_vien.ChucVu }})</p>
+    <p><strong>Nhân viên phụ trách:</strong> {{ hoa_don.nhan_vien.HoTen }} ({{ hoa_don.nhan_vien.ChucVu }})</p>
     {% endif %}
 
     <h3>DỊCH VỤ ĐÃ ĐẶT</h3>
     {% if chi_tiet_dv %}
     <table>
         <thead>
-            <tr>
-                <th>Tên dịch vụ</th>
-                <th>Số lượng</th>
-                <th>Thành tiền</th>
-            </tr>
+        <tr>
+            <th>Tên dịch vụ</th>
+            <th>Số lượng</th>
+            <th>Thành tiền</th>
+        </tr>
         </thead>
         <tbody>
-            {% for ct in chi_tiet_dv %}
-            <tr>
-                <td>{{ ct.dich_vu.TenDichVu }}</td>
-                <td>{{ ct.SoLuong }}</td>
-                <td>{{ "{:,.0f}".format(ct.ThanhTien) }}đ</td>
-            </tr>
-            {% endfor %}
+        {% for ct in chi_tiet_dv %}
+        <tr>
+            <td>{{ ct.dich_vu.TenDichVu }}</td>
+            <td>{{ ct.SoLuong }}</td>
+            <td>{{ "{:,.0f}".format(ct.ThanhTien) }}đ</td>
+        </tr>
+        {% endfor %}
         </tbody>
     </table>
     {% else %}
-        <p>Chưa có dịch vụ nào được đặt.</p>
+    <p>Chưa có dịch vụ nào được đặt.</p>
     {% endif %}
 
     <table>

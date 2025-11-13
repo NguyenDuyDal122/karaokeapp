@@ -55,32 +55,83 @@
     🎤 Đặt phòng: {{ room.TenPhong }}
 </h2>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div style="margin: 10px auto; width: 90%;">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} flash-msg" style="
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 500;
+            {% if category == 'success' %}
+                background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+            {% elif category == 'danger' %}
+                background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+            {% elif category == 'warning' %}
+                background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+            {% else %}
+                background-color: #cce5ff; color: #004085; border: 1px solid #b8daff;
+            {% endif %}
+        ">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
 <form method="post">
     <label>Ngày đặt:</label>
-    <input type="date" name="ngay_dat" required>
+    <input type="date" name="ngay_dat" value="{{ dat_phong_info.get('ngay_dat', '') }}" required>
 
     <label>Giờ bắt đầu:</label>
-    <input type="time" name="gio_bat_dau" required>
+    <input type="time" name="gio_bat_dau" value="{{ dat_phong_info.get('gio_bat_dau', '') }}" required>
 
     <label>Giờ kết thúc:</label>
-    <input type="time" name="gio_ket_thuc" required>
+    <input type="time" name="gio_ket_thuc" value="{{ dat_phong_info.get('gio_ket_thuc', '') }}" required>
 
     <label>Số lượng người (Tối đa {{ room.SucChua }}):</label>
-    <input type="number" name="so_nguoi" min="1" max="{{ room.SucChua }}" required>
+    <input type="number" name="so_nguoi" min="1" max="{{ room.SucChua }}"
+           value="{{ dat_phong_info.get('so_nguoi', '') }}" required>
+
+    <button type="submit" name="them_dich_vu" value="1" style="background-color:#28a745;margin-bottom:20px;">➕ Dịch vụ</button>
 
     <label>Dịch vụ đã chọn:</label>
     {% if selected_services %}
-        <ul>
+    {% set so_luong_map = {} %}
+    {% for item in selected_services_data %}
+    {% set _ = so_luong_map.update({item['id']: item['so_luong']}) %}
+    {% endfor %}
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
         {% for dv in selected_services %}
-            <li>{{ dv.TenDichVu }} ({{ dv.DonGia }}đ)</li>
+        {% set so_luong = so_luong_map.get(dv.MaDichVu, 1) %}
+        <div style="
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                padding: 8px;
+                width: 150px;
+                text-align: center;
+                background: #f9f9f9;
+            ">
+            {% if dv.HinhAnh %}
+            <img src="{{ url_for('static', filename=dv.HinhAnh) }}"
+                 alt="{{ dv.TenDichVu }}"
+                 style="width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;">
+            {% endif %}
+            <h5 style="margin: 0; font-size: 14px;">{{ dv.TenDichVu }}</h5>
+            <p style="margin: 4px 0; font-size: 13px;">Số lượng: {{ so_luong }}</p>
+            <p style="margin: 0; font-size: 13px;">{{ dv.DonGia }}đ</p>
+        </div>
         {% endfor %}
-        </ul>
+    </div>
     {% else %}
-        <p>Chưa có dịch vụ nào được chọn.</p>
+    <p>Chưa có dịch vụ nào được chọn.</p>
     {% endif %}
 
-    <a href="{{ url_for('them_dich_vu', ma_phong=room.MaPhong) }}" class="btn">➕ Thêm dịch vụ</a>
-    <button type="submit">✅ Thanh toán</button>
+    <!-- Nút thanh toán -->
+    <button type="submit" name="thanh_toan" value="1">✅ Thanh toán</button>
 </form>
 
 <br>
