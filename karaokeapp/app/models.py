@@ -26,7 +26,6 @@ class KhachHang(db.Model):
     SoDienThoai = db.Column(db.String(15), nullable=False)
     Email = db.Column(db.String(100))
     SoLuotDatThang = db.Column(db.Integer, default=0)
-    CoTheGiamGia = db.Column(db.Boolean, default=False)
 
     tai_khoan = relationship("TaiKhoan", back_populates="khach_hang")
     dat_phong = relationship("DatPhong", back_populates="khach_hang")
@@ -123,6 +122,7 @@ class HoaDon(db.Model):
     TienPhong = db.Column(DECIMAL(10, 2), default=0.00)
     TienDichVu = db.Column(DECIMAL(10, 2), default=0.00)
     VAT = db.Column(DECIMAL(5, 2), default=10.00)
+    GiamGia = db.Column(DECIMAL(10, 2), default=0.00)
     TongTien = db.Column(DECIMAL(10, 2), default=0.00)
     PhuongThucThanhToan = db.Column(
         Enum('TIEN_MAT', 'CHUYEN_KHOAN', name='thanhtoan_enum'),
@@ -136,6 +136,8 @@ class HoaDon(db.Model):
 
     def tinh_tong_tien(self):
         tong = (self.TienPhong or Decimal('0')) + (self.TienDichVu or Decimal('0'))
+        giam_gia = self.GiamGia or Decimal('0')
         vat = self.VAT or Decimal('10.0')
-        tong_co_vat = tong + tong * vat / Decimal('100')
+        tong_sau_giam = tong - giam_gia
+        tong_co_vat = tong_sau_giam + tong_sau_giam * vat / Decimal('100')
         self.TongTien = tong_co_vat

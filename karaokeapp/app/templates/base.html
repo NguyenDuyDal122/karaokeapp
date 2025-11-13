@@ -71,17 +71,19 @@
     <div class="navbar-left">
         <h2>🎤 Karaoke App</h2>
         {% if session.user %}
-            <span class="welcome">👋 Xin chào, <b>{{ session.user }}</b></span>
+        <span class="welcome">👋 Xin chào, <b>{{ session.user }}</b></span>
         {% endif %}
     </div>
 
     <div class="navbar-right">
         {% if session.user %}
-            <a href="#">Thông tin tài khoản</a>
-            <a href="#">Lịch sử đặt</a>
-            <a href="{{ url_for('logout') }}">Đăng xuất</a>
+        {% if session.get('user') and session.get('role', '').lower() == 'khachhang' %}
+        <a href="{{ url_for('thong_tin_tai_khoan') }}">Thông tin tài khoản</a>
+        {% endif %}
+        <a href="{{ url_for('lich_su_dat_phong') }}">Lịch sử đặt phòng</a>
+        <a href="{{ url_for('logout') }}">Đăng xuất</a>
         {% else %}
-            <a href="{{ url_for('login') }}">Đăng nhập</a>
+        <a href="{{ url_for('login') }}">Đăng nhập</a>
         {% endif %}
     </div>
 </div>

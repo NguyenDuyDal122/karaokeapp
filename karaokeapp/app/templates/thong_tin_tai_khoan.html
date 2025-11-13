@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Thông tin tài khoản{% endblock %}
+
+{% block content %}
+<div style="max-width:600px; margin:30px auto; padding:20px; background:#f8f9fa; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); font-family:Segoe UI;">
+    <h2 style="text-align:center; color:#007BFF; margin-bottom:20px;">👤 Thông tin tài khoản</h2>
+
+    <!-- Hiển thị thông báo flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div style="
+            margin-bottom:15px;
+            padding:12px;
+            border-radius:8px;
+            font-weight:500;
+            {% if category == 'success' %}
+                background-color:#d4edda; color:#155724; border:1px solid #c3e6cb;
+            {% elif category == 'danger' %}
+                background-color:#f8d7da; color:#721c24; border:1px solid #f5c6cb;
+            {% elif category == 'warning' %}
+                background-color:#fff3cd; color:#856404; border:1px solid #ffeeba;
+            {% else %}
+                background-color:#cce5ff; color:#004085; border:1px solid #b8daff;
+            {% endif %}
+        ">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <table style="width:100%; border-collapse:collapse; font-size:16px;">
+        <tr>
+            <td style="padding:10px; font-weight:600;">Tên đăng nhập:</td>
+            <td style="padding:10px;">{{ khach_hang.tai_khoan.TenDangNhap }}</td>
+        </tr>
+        <tr style="background:#f1f1f1;">
+            <td style="padding:10px; font-weight:600;">Họ tên:</td>
+            <td style="padding:10px;">{{ khach_hang.HoTen }}</td>
+        </tr>
+        <tr>
+            <td style="padding:10px; font-weight:600;">Số điện thoại:</td>
+            <td style="padding:10px;">{{ khach_hang.SoDienThoai }}</td>
+        </tr>
+        <tr style="background:#f1f1f1;">
+            <td style="padding:10px; font-weight:600;">Email:</td>
+            <td style="padding:10px;">{{ khach_hang.Email or "-" }}</td>
+        </tr>
+        <tr>
+            <td style="padding:10px; font-weight:600;">Số lượt đặt trong tháng:</td>
+            <td style="padding:10px;">{{ khach_hang.SoLuotDatThang }}</td>
+        </tr>
+    </table>
+
+    <div style="text-align:center; margin-top:20px;">
+        <a href="{{ url_for('doi_mat_khau') }}" style="padding:10px 20px; background:#28a745; color:white; border-radius:8px; text-decoration:none; margin-right:10px;">🔑 Thay đổi mật khẩu</a>
+        <a href="{{ url_for('index') }}" style="padding:10px 20px; background:#007BFF; color:white; border-radius:8px; text-decoration:none;">⬅ Quay lại</a>
+    </div>
+</div>
+{% endblock %}

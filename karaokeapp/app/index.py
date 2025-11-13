@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session
 from app import app, dao, db
 from app.models import PhongHat, ChiTietDatDichVu, HoaDon, DatPhong, DichVu, KhachHang, TaiKhoan, NhanVien
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from decimal import Decimal
 
 
@@ -32,8 +32,6 @@ def login():
                 session["user_id"] = user.khach_hang.MaKhachHang
             else:
                 session["user_id"] = None  # hoặc xử lý báo lỗi nếu chưa có KhachHang
-
-            flash(f"🎉 Chào mừng {user.TenDangNhap} ({user.VaiTro}) đăng nhập thành công!", "success")
 
             # Phân quyền điều hướng
             if user.VaiTro.lower() == "khachhang":
@@ -192,6 +190,12 @@ def dat_phong(ma_phong):
             thoi_gian_bd = datetime.strptime(f"{ngay_dat} {gio_bat_dau}", "%Y-%m-%d %H:%M")
             thoi_gian_kt = datetime.strptime(f"{ngay_dat} {gio_ket_thuc}", "%Y-%m-%d %H:%M")
 
+            # --- Không cho đặt ngày/giờ trong quá khứ ---
+            now = datetime.now()
+            if thoi_gian_bd < now:
+                flash("❌ Không thể đặt phòng trong quá khứ!", "danger")
+                return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
             if thoi_gian_kt <= thoi_gian_bd:
                 flash("❌ Giờ kết thúc phải lớn hơn giờ bắt đầu!", "danger")
                 return redirect(url_for("dat_phong", ma_phong=ma_phong))
@@ -264,6 +268,26 @@ def dat_phong(ma_phong):
                 Nguon='ONLINE',
                 MaNhanVien=ma_nhan_vien
             )
+
+            # --- Giảm 5% nếu khách đã đặt >= 10 lần ---
+            kh = KhachHang.query.get(khach_hang_id)
+            if kh:
+                kh.SoLuotDatThang = (kh.SoLuotDatThang or 0) + 1
+                db.session.commit()
+
+                if kh.SoLuotDatThang >= 10:
+                    tong_truoc_giam = hoa_don.TienPhong + hoa_don.TienDichVu
+                    giam_gia = tong_truoc_giam * Decimal('0.05')
+                    hoa_don.GiamGia = giam_gia  # nếu model HoaDon có cột GiamGia
+                    # 🔁 Reset lại số lượt đặt trong tháng
+                    kh.SoLuotDatThang = 0
+                    db.session.commit()
+                else:
+                    hoa_don.GiamGia = Decimal('0.00')
+            else:
+                hoa_don.GiamGia = Decimal('0.00')
+
+            # --- Tính tổng sau khi giảm và VAT ---
             hoa_don.tinh_tong_tien()
             db.session.add(hoa_don)
             db.session.commit()
@@ -324,5 +348,102 @@ def xem_hoa_don(ma_hoa_don):
     hoa_don = HoaDon.query.get_or_404(ma_hoa_don)
     chi_tiet_dv = ChiTietDatDichVu.query.filter_by(MaDatPhong=hoa_don.MaDatPhong).all()
     return render_template("hoa_don.html", hoa_don=hoa_don, chi_tiet_dv=chi_tiet_dv)
+
+@app.route("/thong-tin-tai-khoan")
+def thong_tin_tai_khoan():
+    # Kiểm tra đăng nhập
+    if "user" not in session or session.get("role", "").lower() != "khachhang":
+        flash("Vui lòng đăng nhập bằng tài khoản khách hàng để xem thông tin tài khoản.", "warning")
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+    khach_hang = KhachHang.query.get(user_id)
+    if not khach_hang:
+        flash("Không tìm thấy thông tin khách hàng!", "danger")
+        return redirect(url_for("login"))
+
+    return render_template("thong_tin_tai_khoan.html", khach_hang=khach_hang)
+
+@app.route("/doi-mat-khau", methods=["GET", "POST"])
+def doi_mat_khau():
+    if "user" not in session or session.get("role", "").lower() != "khachhang":
+        flash("Vui lòng đăng nhập để đổi mật khẩu.", "warning")
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+    khach_hang = KhachHang.query.get(user_id)
+    if not khach_hang:
+        flash("Không tìm thấy thông tin khách hàng!", "danger")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        mat_khau_cu = request.form.get("mat_khau_cu")
+        mat_khau_moi = request.form.get("mat_khau_moi")
+        nhap_lai = request.form.get("nhap_lai")
+
+        # Kiểm tra mật khẩu cũ
+        if not check_password_hash(khach_hang.tai_khoan.MatKhau, mat_khau_cu):
+            flash("❌ Mật khẩu cũ không đúng!", "danger")
+            return redirect(url_for("doi_mat_khau"))
+
+        if mat_khau_moi != nhap_lai:
+            flash("❌ Mật khẩu mới và xác nhận không trùng khớp!", "danger")
+            return redirect(url_for("doi_mat_khau"))
+
+        # Cập nhật mật khẩu mới
+        khach_hang.tai_khoan.MatKhau = generate_password_hash(mat_khau_moi)
+        db.session.commit()
+        flash("✅ Đổi mật khẩu thành công!", "success")
+        return redirect(url_for("thong_tin_tai_khoan"))
+
+    return render_template("doi_mat_khau.html")
+
+from flask import session, flash, redirect, url_for, render_template
+from decimal import Decimal
+
+@app.route("/lich-su-dat-phong")
+def lich_su_dat_phong():
+    # --- Kiểm tra đăng nhập khách hàng ---
+    if "user" not in session or session.get("role", "").lower() != "khachhang":
+        flash("Vui lòng đăng nhập bằng tài khoản khách hàng để xem lịch sử đặt phòng.", "warning")
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+    khach_hang = KhachHang.query.get(user_id)
+    if not khach_hang:
+        flash("Không tìm thấy thông tin khách hàng!", "danger")
+        return redirect(url_for("login"))
+
+    # --- Lấy danh sách đặt phòng theo khách hàng ---
+    dat_phongs = DatPhong.query.filter_by(MaKhachHang=user_id).order_by(DatPhong.ThoiGianBatDau.desc()).all()
+
+    return render_template("lich_su_dat_phong.html", dat_phongs=dat_phongs)
+
+@app.route("/huy-dat-phong/<int:ma_dat_phong>", methods=["POST"])
+def huy_dat_phong(ma_dat_phong):
+    if "user" not in session or session.get("role", "").lower() != "khachhang":
+        flash("Vui lòng đăng nhập để thực hiện thao tác này.", "warning")
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")
+    dp = DatPhong.query.get(ma_dat_phong)
+
+    if not dp or dp.MaKhachHang != user_id:
+        flash("Không tìm thấy đặt phòng này!", "danger")
+        return redirect(url_for("lich_su_dat_phong"))
+
+    if dp.TrangThai != "CHO_XAC_NHAN":
+        flash("Chỉ có thể hủy các đặt phòng đang chờ xác nhận.", "warning")
+        return redirect(url_for("lich_su_dat_phong"))
+
+    # Cập nhật trạng thái hủy
+    dp.TrangThai = "HUY"
+    db.session.commit()
+    flash("✅ Hủy đặt phòng thành công.", "success")
+    return redirect(url_for("lich_su_dat_phong"))
+
+
+
+
 
 

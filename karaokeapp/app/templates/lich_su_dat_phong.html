@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử đặt phòng{% endblock %}
+
+{% block content %}
+<h2 style="text-align:center; color:#007BFF; margin-bottom:20px;">📜 Lịch sử đặt phòng</h2>
+
+{% if dat_phongs %}
+<table style="width:100%; border-collapse:collapse; font-family:Segoe UI; font-size:14px;">
+    <thead>
+    <tr style="background:#007BFF; color:white;">
+        <th style="padding:10px;">Phòng</th>
+        <th>Ngày giờ</th>
+        <th>Số người</th>
+        <th>Trạng thái</th>
+        <th>Tổng tiền</th>
+        <th>Dịch vụ</th>
+        <th>Hành động</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for dp in dat_phongs %}
+    <tr style="border-bottom:1px solid #ddd; {% if loop.index % 2 == 0 %}background:#f9f9f9;{% endif %}">
+        <td style="padding:8px;">{{ dp.phong.TenPhong }}</td>
+        <td style="padding:8px;">
+            {{ dp.ThoiGianBatDau.strftime("%d/%m/%Y %H:%M") }} -
+            {{ dp.ThoiGianKetThuc.strftime("%H:%M") }}
+        </td>
+        <td style="padding:8px;">{{ dp.SoNguoi }}</td>
+        <td style="padding:8px;">{{ dp.TrangThai.replace("_"," ") }}</td>
+        <td style="padding:8px;">
+            {% if dp.hoa_don %}
+            {{ dp.hoa_don.TongTien or 0 }} đ
+            {% else %}
+            Chưa thanh toán
+            {% endif %}
+        </td>
+        <td style="padding:8px;">
+            {% if dp.chi_tiet_dv %}
+            <ul style="margin:0; padding-left:15px;">
+                {% for ct in dp.chi_tiet_dv %}
+                <li>{{ ct.dich_vu.TenDichVu }} x{{ ct.SoLuong }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            -
+            {% endif %}
+        </td>
+        <td style="padding:8px; text-align:center;">
+            {% if dp.TrangThai == 'CHO_XAC_NHAN' %}
+            <form method="post" action="{{ url_for('huy_dat_phong', ma_dat_phong=dp.MaDatPhong) }}"
+                  onsubmit="return confirm('Bạn có chắc muốn hủy đặt phòng này?');">
+                <button type="submit"
+                        style="padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">
+                    Hủy
+                </button>
+            </form>
+            {% else %}
+            -
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p style="text-align:center; color:#555; margin-top:30px;">Chưa có đặt phòng nào.</p>
+{% endif %}
+
+<div style="text-align:center; margin-top:20px;">
+    <a href="{{ url_for('index') }}"
+       style="padding:8px 18px; background:#007BFF; color:white; border-radius:6px; text-decoration:none;">⬅ Quay
+        lại</a>
+</div>
+{% endblock %}

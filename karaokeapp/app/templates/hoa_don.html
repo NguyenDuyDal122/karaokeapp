@@ -101,6 +101,10 @@
             <td>{{ "{:,.0f}".format((hoa_don.TienPhong + hoa_don.TienDichVu) * hoa_don.VAT / 100) }}đ</td>
         </tr>
         <tr>
+            <td class="total">Giảm giá:</td>
+            <td>{{ "{:,.0f}".format(hoa_don.GiamGia) }}đ</td>
+        </tr>
+        <tr>
             <td class="total">TỔNG CỘNG:</td>
             <td>{{ "{:,.0f}".format(hoa_don.TongTien) }}đ</td>
         </tr>

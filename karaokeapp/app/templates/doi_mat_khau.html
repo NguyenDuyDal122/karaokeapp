@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Đổi mật khẩu{% endblock %}
+
+{% block content %}
+<div style="max-width:450px; margin:50px auto; padding:25px; background:white; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.1); font-family:'Segoe UI', sans-serif;">
+
+    <h2 style="text-align:center; color:#007BFF; margin-bottom:25px;">🔑 Đổi mật khẩu</h2>
+
+    <!-- Hiển thị thông báo flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div style="
+            margin-bottom:15px;
+            padding:12px;
+            border-radius:8px;
+            font-weight:500;
+            {% if category == 'success' %}
+                background-color:#d4edda; color:#155724; border:1px solid #c3e6cb;
+            {% elif category == 'danger' %}
+                background-color:#f8d7da; color:#721c24; border:1px solid #f5c6cb;
+            {% elif category == 'warning' %}
+                background-color:#fff3cd; color:#856404; border:1px solid #ffeeba;
+            {% else %}
+                background-color:#cce5ff; color:#004085; border:1px solid #b8daff;
+            {% endif %}
+        ">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form method="post">
+        <div style="margin-bottom:15px;">
+            <label style="font-weight:600;">Mật khẩu cũ:</label>
+            <input type="password" name="mat_khau_cu" required
+                   style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #ced4da; font-size:14px;">
+        </div>
+
+        <div style="margin-bottom:15px;">
+            <label style="font-weight:600;">Mật khẩu mới:</label>
+            <input type="password" name="mat_khau_moi" required
+                   style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #ced4da; font-size:14px;">
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label style="font-weight:600;">Nhập lại mật khẩu mới:</label>
+            <input type="password" name="nhap_lai" required
+                   style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #ced4da; font-size:14px;">
+        </div>
+
+        <button type="submit" style="width:100%; padding:12px; background:#28a745; color:white; border:none; border-radius:8px; font-weight:600; font-size:15px; cursor:pointer; transition:0.3s;">
+            ✅ Cập nhật
+        </button>
+    </form>
+
+    <div style="text-align:center; margin-top:20px;">
+        <a href="{{ url_for('thong_tin_tai_khoan') }}" style="padding:8px 18px; background:#007BFF; color:white; border-radius:6px; text-decoration:none; font-weight:500;">⬅ Quay lại</a>
+    </div>
+</div>
+{% endblock %}
