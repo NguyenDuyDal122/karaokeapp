@@ -83,29 +83,46 @@
     </style>
 </head>
 <body>
-    <div class="register-container">
-        <h2>🎵 Đăng ký tài khoản 🎤</h2>
+<div class="register-container">
+    <h2>🎵 Đăng ký tài khoản 🎤</h2>
 
-        <form method="POST">
-            <label>Tên đăng nhập</label>
-            <input type="text" name="username" required>
+    <form method="POST">
+        <label>Tên đăng nhập</label>
+        <input type="text" name="username" required>
 
-            <label>Mật khẩu</label>
-            <input type="password" name="password" required>
+        <label>Mật khẩu</label>
+        <input type="password" name="password" required>
 
-            <label>Họ tên</label>
-            <input type="text" name="hoten" required>
+        <label>Họ tên</label>
+        <input type="text" name="hoten" required>
 
-            <label>Số điện thoại</label>
-            <input type="text" name="sdt" required>
+        <label>Số điện thoại</label>
+        <input type="text" name="sdt" required>
 
-            <label>Email</label>
-            <input type="email" name="email">
+        <label>Email</label>
+        <input type="email" name="email">
 
-            <button type="submit">Đăng ký</button>
-        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div style="
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        color: white;
+        background: {% if category == 'success' %}#28a745{% elif category == 'danger' %}#dc3545{% else %}#007bff{% endif %};
+      ">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
 
-        <a href="{{ url_for('login') }}" class="back-login">⬅ Quay lại đăng nhập</a>
-    </div>
+
+        <button type="submit">Đăng ký</button>
+    </form>
+
+    <a href="{{ url_for('login') }}" class="back-login">⬅ Quay lại đăng nhập</a>
+</div>
 </body>
 </html>

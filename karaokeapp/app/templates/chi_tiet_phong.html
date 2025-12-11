@@ -23,9 +23,9 @@
                 <td><strong>Loại phòng</strong></td>
                 <td>
                     {% if room.LoaiPhong == 'VIP' %}
-                        <span style="font-weight:600; color:gold;">✨ VIP</span>
+                    <span style="font-weight:600; color:gold;">✨ VIP</span>
                     {% else %}
-                        <span style="font-weight:600; color:#007BFF;">Phòng thường</span>
+                    <span style="font-weight:600; color:#007BFF;">Phòng thường</span>
                     {% endif %}
                 </td>
             </tr>
@@ -43,12 +43,14 @@
             <tr>
                 <td><strong>Trạng thái</strong></td>
                 <td>
-                    {% if room.TrangThai == 'TRONG' %}
-                        <span style="color:green; font-weight:600;">🟢 Còn trống</span>
-                    {% elif room.TrangThai == 'DANG_HAT' %}
-                        <span style="color:red; font-weight:600;">🔴 Đang hát</span>
-                    {% elif room.TrangThai == 'BAO_TRI' %}
-                        <span style="color:orange; font-weight:600;">🛠️ Bảo trì</span>
+                    {% if room.trang_thai_dat == 'TRONG' %}
+                    <span style="color:green; font-weight:600;">🟢 Trống</span>
+
+                    {% elif room.trang_thai_dat == 'DANG_HAT' %}
+                    <span style="color:red; font-weight:600;">🔴 Đang hát</span>
+
+                    {% elif room.trang_thai_dat == 'BAO_TRI' %}
+                    <span style="color:orange; font-weight:600;">🛠️ Bảo trì</span>
                     {% endif %}
                 </td>
             </tr>
@@ -59,22 +61,52 @@
             {{ room.MoTa or "Chưa có mô tả cho phòng này." }}
         </p>
 
-        <!-- NÚT ĐẶT PHÒNG -->
-        {% if room.TrangThai == 'TRONG' %}
-            <a href="{{ url_for('dat_phong', ma_phong=room.MaPhong) }}"
-               style="display:inline-block; margin-top:25px; background-color:#28a745;
-                      color:white; padding:14px 25px; border-radius:10px; text-decoration:none;
-                      font-size:1.1rem; font-weight:600; transition:0.3s;"
-               onmouseover="this.style.backgroundColor='#218838';"
-               onmouseout="this.style.backgroundColor='#28a745';">
-               🏷️ Đặt phòng ngay
-            </a>
+        <h3 style="margin-top:25px; color:#007BFF; font-weight:700;">📅 Lịch đã đặt</h3>
+
+        {% if lich_dat and lich_dat|length > 0 %}
+        <ul style="list-style:none; padding-left:0; margin-top:10px;">
+            {% for dp in lich_dat %}
+            <li style="background:#f8f9fa; padding:10px 15px; margin-bottom:8px;
+                       border-radius:8px; border-left:4px solid #007BFF;">
+                ⏰ <strong>{{ dp.ThoiGianBatDau.strftime("%d/%m/%Y %H:%M") }}
+                → {{ dp.ThoiGianKetThuc.strftime("%d/%m/%Y %H:%M") }}</strong>
+                <span style="color:gray; font-size:0.9rem;">
+                    ({{ dp.TrangThai }})
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
         {% else %}
-            <button style="background-color: grey; color:white; padding:14px 25px; border-radius:10px;
-                           border:none; font-size:1.1rem; margin-top:25px;" disabled>
-                🚫 Không khả dụng
-            </button>
+        <p style="color:gray;">Chưa có lịch đặt nào cho phòng này.</p>
         {% endif %}
+
+
+        {% if room.trang_thai_dat != 'BAO_TRI' %}
+    {% if session.get("role") == "khachhang" %}
+        <!-- Nếu là khách hàng: Đặt phòng -->
+        <a href="{{ url_for('dat_phong', ma_phong=room.MaPhong) }}"
+           style="display:inline-block; margin-top:25px; background-color:#28a745; color:white;
+                  padding:14px 25px; border-radius:10px; text-decoration:none; font-size:1.1rem; font-weight:600;">
+            🏷️ Đặt phòng ngay
+        </a>
+
+    {% elif session.get("role") == "nhanvien" %}
+        <!-- Nếu là nhân viên: thêm khách hàng -->
+        <a href="{{ url_for('them_khach_hang', ma_phong=room.MaPhong) }}"
+           style="display:inline-block; margin-top:25px; background-color:#007bff; color:white;
+                  padding:14px 25px; border-radius:10px; text-decoration:none; font-size:1.1rem; font-weight:600;">
+            🏷️ Đặt phòng ngay
+        </a>
+
+    {% else %}
+        <!-- Nếu chưa đăng nhập -->
+        <a href="{{ url_for('login') }}"
+           style="display:inline-block; margin-top:25px; background-color:#ffc107; color:black;
+                  padding:14px 25px; border-radius:10px; text-decoration:none; font-size:1.1rem; font-weight:600;">
+            🔐 Đăng nhập để đặt phòng
+        </a>
+    {% endif %}
+{% endif %}
     </div>
 </div>
 

@@ -8,11 +8,52 @@ from decimal import Decimal
 
 @app.route("/")
 def index():
+    from app.models import PhongHat, DatPhong
+    from datetime import datetime
+
     rooms_vip = PhongHat.query.filter_by(LoaiPhong='VIP').all()
     rooms_thuong = PhongHat.query.filter_by(LoaiPhong='THUONG').all()
-    return render_template("home.html",
-                           rooms_vip=rooms_vip,
-                           rooms_thuong=rooms_thuong)
+
+    now = datetime.now()
+
+    # ---------- CẬP NHẬT TỰ ĐỘNG TRẠNG THÁI ĐẶT PHÒNG ----------
+    tat_ca_dat = DatPhong.query.filter(DatPhong.TrangThai != "HUY").all()
+
+    for dat in tat_ca_dat:
+        if dat.ThoiGianBatDau <= now <= dat.ThoiGianKetThuc:
+            if dat.TrangThai != "DANG_HAT":
+                dat.TrangThai = "DANG_HAT"
+        elif now > dat.ThoiGianKetThuc:
+            if dat.TrangThai != "DA_THANH_TOAN":
+                dat.TrangThai = "DA_THANH_TOAN"
+
+    db.session.commit()
+
+    # ---------- XÁC ĐỊNH TRẠNG THÁI HIỂN THỊ CHO TỪNG PHÒNG ----------
+    for r in rooms_vip + rooms_thuong:
+
+        # Nếu phòng bảo trì thì giữ nguyên và bỏ qua
+        if r.TrangThai == "BAO_TRI":
+            r.trang_thai_dat = "BAO_TRI"
+            continue
+
+        # Mặc định phòng trống
+        r.trang_thai_dat = "TRONG"
+
+        # Kiểm tra có lịch đặt đang hát không
+        dp = DatPhong.query.filter(
+            DatPhong.MaPhong == r.MaPhong,
+            DatPhong.TrangThai == "DANG_HAT"
+        ).first()
+
+        if dp:
+            r.trang_thai_dat = "DANG_HAT"
+
+    return render_template(
+        "home.html",
+        rooms_vip=rooms_vip,
+        rooms_thuong=rooms_thuong
+    )
 
 # --- Trang đăng nhập ---
 @app.route("/login", methods=["GET", "POST"])
@@ -24,28 +65,50 @@ def login():
         user = dao.check_login(username, password)
 
         if user:
+            # Lưu username và vai trò
             session["user"] = user.TenDangNhap
-            session["role"] = user.VaiTro
+            session["role"] = user.VaiTro.lower()  # chuyển về chữ thường cho chắc chắn
 
-            # Lấy MaKhachHang từ user.khach_hang
-            if user.khach_hang:  # kiểm tra có tồn tại KhachHang không
-                session["user_id"] = user.khach_hang.MaKhachHang
+            # Lưu đúng user_id theo vai trò
+            if session["role"] == "khachhang":
+                if user.khach_hang:
+                    session["user_id"] = user.khach_hang.MaKhachHang
+                else:
+                    flash("Tài khoản không có dữ liệu khách hàng!", "danger")
+                    return redirect(url_for("login"))
+
+            elif session["role"] == "nhanvien":
+
+                if user.nhan_vien:
+
+                    session["nhanvien_id"] = user.nhan_vien.MaNhanVien
+
+                    session["user_id"] = user.nhan_vien.MaNhanVien  # vẫn giữ nếu cần
+
+                else:
+
+                    flash("Tài khoản không có dữ liệu nhân viên!", "danger")
+
+                    return redirect(url_for("login"))
+
+            elif session["role"] == "admin":
+                # admin không cần MaKhachHang / MaNhanVien
+                session["user_id"] = user.MaTaiKhoan
+
             else:
-                session["user_id"] = None  # hoặc xử lý báo lỗi nếu chưa có KhachHang
+                flash("❌ Vai trò không hợp lệ!", "danger")
+                return redirect(url_for("login"))
 
-            # Phân quyền điều hướng
-            if user.VaiTro.lower() == "khachhang":
-                return redirect(url_for("index"))
-            elif user.VaiTro.lower() == "nhanvien":
-                return redirect(url_for("staff_dashboard"))
-            elif user.VaiTro.lower() == "admin":
+            # Điều hướng theo vai trò
+            if session["role"] == "admin":
                 return redirect(url_for("admin_dashboard"))
             else:
-                flash("❌ Không xác định được vai trò người dùng!", "danger")
-                return redirect(url_for("login"))
-        else:
-            flash("❌ Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khóa!", "danger")
+                return redirect(url_for("index"))
 
+        # Nếu login sai
+        flash("❌ Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản bị khóa!", "danger")
+
+    # Hiện trang login
     return render_template("index.html")
 
 @app.route("/register", methods=["GET", "POST"])
@@ -57,33 +120,63 @@ def register():
         sdt = request.form.get("sdt")
         email = request.form.get("email")
 
-        # ✅ Kiểm tra tài khoản đã tồn tại chưa
+        # --- 1) Kiểm tra trùng username ---
         exist = TaiKhoan.query.filter_by(TenDangNhap=username).first()
         if exist:
             flash("❌ Tên đăng nhập đã tồn tại!", "danger")
             return redirect(url_for("register"))
 
-        # ✅ Băm mật khẩu trước khi lưu (quan trọng)
+        # --- 2) Kiểm tra SDT hoặc Email đã tồn tại trong bảng KhachHang ---
+        kh_exist = KhachHang.query.filter(
+            (KhachHang.SoDienThoai == sdt) | (KhachHang.Email == email)
+        ).first()
+
+        if kh_exist:
+            # --- A) Đã có tài khoản ---
+            if kh_exist.MaTaiKhoan is not None:
+                flash("❌ Số điện thoại hoặc email đã có tài khoản trước đó!", "danger")
+                return redirect(url_for("register"))
+
+            # --- B) Chưa có tài khoản → cập nhật luôn ---
+            hashed_password = generate_password_hash(password)
+
+            tai_khoan = TaiKhoan(
+                TenDangNhap=username,
+                MatKhau=hashed_password,
+                VaiTro="KHACHHANG",
+                TrangThai=True
+            )
+            db.session.add(tai_khoan)
+            db.session.commit()
+
+            kh_exist.MaTaiKhoan = tai_khoan.MaTaiKhoan
+            kh_exist.HoTen = hoten
+            kh_exist.SoDienThoai = sdt
+            kh_exist.Email = email
+
+            db.session.commit()
+
+            flash("✅ Đăng ký thành công! Tài khoản đã được gắn với thông tin của bạn.", "success")
+            return redirect(url_for("login"))
+
+        # --- 3) Trường hợp hoàn toàn mới → tạo mới cả 2 bảng ---
         hashed_password = generate_password_hash(password)
 
         tai_khoan = TaiKhoan(
             TenDangNhap=username,
-            MatKhau=hashed_password,  # ✅ Lưu password dạng hash
+            MatKhau=hashed_password,
             VaiTro="KHACHHANG",
             TrangThai=True
         )
-
         db.session.add(tai_khoan)
-        db.session.commit()  # Để có MaTaiKhoan trước khi tạo KhachHang
+        db.session.commit()
 
-        # ✅ Tạo khách hàng liên kết với tài khoản
         kh = KhachHang(
             MaTaiKhoan=tai_khoan.MaTaiKhoan,
             HoTen=hoten,
             SoDienThoai=sdt,
             Email=email
         )
-
         db.session.add(kh)
         db.session.commit()
 
@@ -123,35 +216,40 @@ def admin_dashboard():
         <a href='/logout'>Đăng xuất</a>
     """
 
-
-# --- Trang sau khi đăng nhập (dành chung nếu cần) ---
-@app.route("/dashboard")
-def dashboard():
-    if "user" not in session:
-        flash("⚠️ Vui lòng đăng nhập trước!", "warning")
-        return redirect(url_for("login"))
-
-    return f"""
-        <h2>Xin chào {session['user']} ({session['role']})!</h2>
-        <p>Bạn đã đăng nhập thành công 🎉</p>
-        <a href='/logout'>Đăng xuất</a>
-    """
-
 @app.route("/phong/<int:ma_phong>")
 def chi_tiet_phong(ma_phong):
-    from app.models import PhongHat
-    room = PhongHat.query.get(ma_phong)
+    from app.models import PhongHat, DatPhong
 
+    room = PhongHat.query.get(ma_phong)
     if not room:
         return "Không tìm thấy phòng", 404
 
-    return render_template("chi_tiet_phong.html", room=room)
+    # ---------- XÁC ĐỊNH TRẠNG THÁI HIỂN THỊ ----------
+    if room.TrangThai == "BAO_TRI":
+        room.trang_thai_dat = "BAO_TRI"
+    else:
+        dp = DatPhong.query.filter(
+            DatPhong.MaPhong == ma_phong,
+            DatPhong.TrangThai == "DANG_HAT"
+        ).first()
+
+        room.trang_thai_dat = "DANG_HAT" if dp else "TRONG"
+
+    # ---------- DANH SÁCH LỊCH ĐẶT (LOẠI BỎ HỦY + ĐÃ THANH TOÁN) ----------
+    lich_dat = DatPhong.query.filter(
+        DatPhong.MaPhong == ma_phong,
+        DatPhong.TrangThai.notin_(["HUY", "DA_THANH_TOAN"])
+    ).order_by(DatPhong.ThoiGianBatDau.asc()).all()
+
+    return render_template("chi_tiet_phong.html",
+                           room=room,
+                           lich_dat=lich_dat)
 
 @app.route("/dat-phong/<int:ma_phong>", methods=["GET", "POST"])
 def dat_phong(ma_phong):
     # Kiểm tra đăng nhập và vai trò
-    if "user" not in session or session["role"].lower() != "khachhang":
-        flash("Vui lòng đăng nhập bằng tài khoản khách hàng để đặt phòng.", "warning")
+    if "user" not in session or session["role"].lower() != "khachhang" and session["role"].lower() != "nhanvien":
+        flash("Vui lòng đăng nhập bằng tài khoản khách hàng hoặc nhân viên để đặt phòng.", "warning")
         return redirect(url_for("login"))
 
     room = PhongHat.query.get_or_404(ma_phong)
@@ -257,8 +355,18 @@ def dat_phong(ma_phong):
             so_gio = Decimal((thoi_gian_kt - thoi_gian_bd).seconds) / Decimal(3600)
             tien_dich_vu = sum(ct.ThanhTien for ct in dp.chi_tiet_dv)
 
-            admin_nv = NhanVien.query.filter_by(ChucVu='ADMIN').first()
-            ma_nhan_vien = admin_nv.MaNhanVien if admin_nv else None
+            # --- Xác định mã nhân viên lập hóa đơn ---
+            ma_nhan_vien = None
+
+            if session.get("role") == "nhanvien":
+                # Nhân viên STAFF đang đăng nhập -> gán chính nhân viên này
+                ma_nhan_vien = session.get("nhanvien_id")
+
+            elif session.get("role") == "khachhang":
+                # Nếu khách đặt -> tự động lấy nhân viên có chức vụ ADMIN
+                admin_nv = NhanVien.query.filter_by(ChucVu="ADMIN").first()
+                if admin_nv:
+                    ma_nhan_vien = admin_nv.MaNhanVien
 
             hoa_don = HoaDon(
                 MaDatPhong=dp.MaDatPhong,
@@ -266,7 +374,7 @@ def dat_phong(ma_phong):
                 TienDichVu=tien_dich_vu,
                 PhuongThucThanhToan='TIEN_MAT',
                 Nguon='ONLINE',
-                MaNhanVien=ma_nhan_vien
+                MaNhanVien=ma_nhan_vien  # <-- dùng đúng nhân viên đang thao tác
             )
 
             # --- Giảm 5% nếu khách đã đặt >= 10 lần ---
@@ -364,37 +472,80 @@ def thong_tin_tai_khoan():
 
     return render_template("thong_tin_tai_khoan.html", khach_hang=khach_hang)
 
+@app.route("/thong-tin-nhan-vien")
+def thong_tin_nhan_vien():
+    if "user" not in session or session.get("role") != "nhanvien":
+        flash("Bạn phải đăng nhập bằng tài khoản nhân viên.", "warning")
+        return redirect(url_for("login"))
+
+    user_id = session.get("user_id")  # đây là MaNhanVien
+    nv = NhanVien.query.get(user_id)  # lấy đúng theo khóa chính MaNhanVien
+
+    if not nv:
+        flash("Không tìm thấy thông tin nhân viên!", "danger")
+        return redirect(url_for("index"))
+
+    return render_template("thong_tin_nhan_vien.html", nhan_vien=nv)
+
 @app.route("/doi-mat-khau", methods=["GET", "POST"])
 def doi_mat_khau():
-    if "user" not in session or session.get("role", "").lower() != "khachhang":
-        flash("Vui lòng đăng nhập để đổi mật khẩu.", "warning")
+
+    # Kiểm tra đăng nhập
+    if "user" not in session:
+        flash("Bạn phải đăng nhập để đổi mật khẩu.", "warning")
         return redirect(url_for("login"))
 
+    role = session.get("role", "").lower()
     user_id = session.get("user_id")
-    khach_hang = KhachHang.query.get(user_id)
-    if not khach_hang:
-        flash("Không tìm thấy thông tin khách hàng!", "danger")
+
+    # Lấy đúng tài khoản theo vai trò
+    tai_khoan = None
+
+    if role == "khachhang":
+        kh = KhachHang.query.get(user_id)
+        if not kh:
+            flash("Không tìm thấy thông tin khách hàng!", "danger")
+            return redirect(url_for("login"))
+        tai_khoan = kh.tai_khoan
+
+    elif role == "nhanvien":
+        nv = NhanVien.query.get(user_id)
+        if not nv:
+            flash("Không tìm thấy thông tin nhân viên!", "danger")
+            return redirect(url_for("login"))
+        tai_khoan = nv.tai_khoan
+
+    else:
+        flash("Vai trò không hợp lệ!", "danger")
         return redirect(url_for("login"))
 
+    # Nếu POST: xử lý đổi mật khẩu
     if request.method == "POST":
         mat_khau_cu = request.form.get("mat_khau_cu")
         mat_khau_moi = request.form.get("mat_khau_moi")
         nhap_lai = request.form.get("nhap_lai")
 
         # Kiểm tra mật khẩu cũ
-        if not check_password_hash(khach_hang.tai_khoan.MatKhau, mat_khau_cu):
+        if not check_password_hash(tai_khoan.MatKhau, mat_khau_cu):
             flash("❌ Mật khẩu cũ không đúng!", "danger")
             return redirect(url_for("doi_mat_khau"))
 
+        # Kiểm tra mật khẩu mới
         if mat_khau_moi != nhap_lai:
             flash("❌ Mật khẩu mới và xác nhận không trùng khớp!", "danger")
             return redirect(url_for("doi_mat_khau"))
 
-        # Cập nhật mật khẩu mới
-        khach_hang.tai_khoan.MatKhau = generate_password_hash(mat_khau_moi)
+        # Lưu mật khẩu mới
+        tai_khoan.MatKhau = generate_password_hash(mat_khau_moi)
         db.session.commit()
+
         flash("✅ Đổi mật khẩu thành công!", "success")
-        return redirect(url_for("thong_tin_tai_khoan"))
+
+        # Điều hướng quay lại đúng trang thông tin
+        if role == "khachhang":
+            return redirect(url_for("thong_tin_tai_khoan"))
+        else:
+            return redirect(url_for("thong_tin_nhan_vien"))
 
     return render_template("doi_mat_khau.html")
 
@@ -441,6 +592,43 @@ def huy_dat_phong(ma_dat_phong):
     db.session.commit()
     flash("✅ Hủy đặt phòng thành công.", "success")
     return redirect(url_for("lich_su_dat_phong"))
+
+@app.route("/khach-hang/them/<int:ma_phong>", methods=["GET", "POST"])
+def them_khach_hang(ma_phong):
+    if request.method == "POST":
+        ho_ten = request.form.get("HoTen", "").strip()
+        so_dt = request.form.get("SoDienThoai", "").strip()
+        email = request.form.get("Email", "").strip()
+
+        # Kiểm tra các trường bắt buộc
+        if not ho_ten or not so_dt or not email:
+            flash("Vui lòng điền đầy đủ các trường dữ liệu.", "danger")
+            return redirect(url_for("them_khach_hang", ma_phong=ma_phong))
+
+        # 1. Tìm khách đã có
+        kh = KhachHang.query.filter(
+            (KhachHang.SoDienThoai == so_dt) | (KhachHang.Email == email)
+        ).first()
+
+        if kh:
+            session["khachhang_dat_phong"] = kh.MaKhachHang
+            flash("Khách hàng đã tồn tại, chuyển đến đặt phòng!", "success")
+            return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+        # 2. Chưa có -> tạo mới
+        kh = KhachHang(HoTen=ho_ten, SoDienThoai=so_dt, Email=email)
+        db.session.add(kh)
+        db.session.commit()
+
+        session["khachhang_dat_phong"] = kh.MaKhachHang
+        flash("Thêm khách hàng thành công! Mời đặt phòng.", "success")
+        return redirect(url_for("dat_phong", ma_phong=ma_phong))
+
+    return render_template("them_khach_hang.html", ma_phong=ma_phong)
+
+
+
+
 
 
 

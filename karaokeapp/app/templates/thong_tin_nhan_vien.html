@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Thông tin nhân viên{% endblock %}
+
+{% block content %}
+<div style="max-width:600px; margin:30px auto; padding:20px; background:#f8f9fa; border-radius:12px;">
+    <h2 style="text-align:center; color:#007BFF;">👤 Thông tin nhân viên</h2>
+
+    <table style="width:100%; margin-top:20px;">
+        <tr><td><b>Họ tên:</b></td><td>{{ nhan_vien.HoTen }}</td></tr>
+        <tr><td><b>Chức vụ:</b></td><td>{{ nhan_vien.ChucVu or "-" }}</td></tr>
+        <tr><td><b>Ngày vào làm:</b></td><td>{{ nhan_vien.NgayVaoLam }}</td></tr>
+        <tr><td><b>Tên đăng nhập:</b></td><td>{{ nhan_vien.tai_khoan.TenDangNhap }}</td></tr>
+    </table>
+
+    <div style="margin-top:20px; text-align:center;">
+        <a href="{{ url_for('doi_mat_khau') }}" style="padding:10px 20px; background:#28a745; color:white;">🔑 Đổi mật khẩu</a>
+    </div>
+</div>
+{% endblock %}

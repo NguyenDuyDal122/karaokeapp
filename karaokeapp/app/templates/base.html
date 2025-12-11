@@ -77,10 +77,14 @@
 
     <div class="navbar-right">
         {% if session.user %}
-        {% if session.get('user') and session.get('role', '').lower() == 'khachhang' %}
+        {% if session.get('role') == 'khachhang' %}
         <a href="{{ url_for('thong_tin_tai_khoan') }}">Thông tin tài khoản</a>
+        {% elif session.get('role') == 'nhanvien' %}
+        <a href="{{ url_for('thong_tin_nhan_vien') }}">Thông tin nhân viên</a>
         {% endif %}
+        {% if session.get('role', '').lower() == 'khachhang' %}
         <a href="{{ url_for('lich_su_dat_phong') }}">Lịch sử đặt phòng</a>
+        {% endif %}
         <a href="{{ url_for('logout') }}">Đăng xuất</a>
         {% else %}
         <a href="{{ url_for('login') }}">Đăng nhập</a>

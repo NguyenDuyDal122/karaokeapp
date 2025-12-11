@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:450px; margin:50px auto; background:white; padding:30px 35px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
+
+    <h2 style="text-align:center; color:#007BFF; margin-bottom:25px;">🎵 Thêm khách hàng 🎤</h2>
+
+    <form method="POST" action="{{ url_for('them_khach_hang', ma_phong=ma_phong) }}">
+
+        <div style="margin-bottom:18px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Họ và tên</label>
+            <input type="text" name="HoTen" placeholder="Nhập họ tên"
+                   style="width:100%; padding:12px; border-radius:10px; border:1px solid #dcdcdc; font-size:15px;">
+        </div>
+
+        <div style="margin-bottom:18px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Số điện thoại</label>
+            <input type="text" name="SoDienThoai" placeholder="Ví dụ: 0987654321"
+                   style="width:100%; padding:12px; border-radius:10px; border:1px solid #dcdcdc; font-size:15px;">
+        </div>
+
+        <div style="margin-bottom:25px;">
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Email</label>
+            <input type="email" name="Email" placeholder="example@gmail.com"
+                   style="width:100%; padding:12px; border-radius:10px; border:1px solid #dcdcdc; font-size:15px;">
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div style="margin-bottom:20px;">
+            {% for category, message in messages %}
+            <div style="
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            color: white;
+            {% if category == 'success' %}background-color: #28a745;{% endif %}
+            {% if category == 'danger' %}background-color: #dc3545;{% endif %}
+            {% if category == 'warning' %}background-color: #ffc107; color: black;{% endif %}
+        ">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+
+        <!-- Nút Thêm khách hàng -->
+        <button type="submit"
+                style="width:106%; padding:14px; border:none; border-radius:10px;
+                       background-color:#007BFF; color:white; font-size:16px; font-weight:600;
+                       margin-bottom:12px; cursor:pointer; transition:0.3s;">
+            🏷️ Thêm khách hàng
+        </button>
+
+        <!-- Nút Hủy -->
+        <a href="{{ url_for('chi_tiet_phong', ma_phong=ma_phong) }}"
+           style="display:block; width:100%; text-align:center; padding:14px; border-radius:10px;
+                  background-color:#6c757d; color:white; font-size:16px; font-weight:600;
+                  text-decoration:none; cursor:pointer; transition:0.3s;">
+            ❌ Hủy
+        </a>
+
+    </form>
+
+</div>
+
+<!-- Hover effect cho hai nút -->
+<style>
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    a:hover {
+        background-color: #5a6268;
+    }
+</style>
+
+{% endblock %}
