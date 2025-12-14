@@ -1,0 +1,46 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Quản lý dịch vụ{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">🍹 Quản lý dịch vụ</h3>
+
+<div class="text-end mb-3">
+    <a href="{{ url_for('add_dich_vu') }}" class="btn btn-success">
+        ➕ Thêm dịch vụ
+    </a>
+</div>
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-primary text-center">
+        <tr>
+            <th>ID</th>
+            <th>Ảnh</th>
+            <th>Tên dịch vụ</th>
+            <th>Đơn giá</th>
+            <th width="180">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for dv in ds_dv %}
+        <tr class="text-center">
+            <td>{{ dv.MaDichVu }}</td>
+            <td>
+                {% if dv.HinhAnh %}
+                <img src="{{ dv.HinhAnh }}"
+                     style="width:70px;height:70px;object-fit:cover;border-radius:8px;">
+                {% endif %}
+            </td>
+            <td>{{ dv.TenDichVu }}</td>
+            <td>{{ "{:,.0f}".format(dv.DonGia) }} đ</td>
+            <td>
+                <a href="{{ url_for('sua_dich_vu', ma_dv=dv.MaDichVu) }}"
+                   class="btn btn-sm btn-warning">✏️ Sửa</a>
+                <a href="{{ url_for('xoa_dich_vu', ma_dv=dv.MaDichVu) }}"
+                   onclick="return confirm('Xóa dịch vụ này?')"
+                   class="btn btn-sm btn-danger">🗑️ Xóa</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

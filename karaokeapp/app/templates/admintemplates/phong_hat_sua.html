@@ -1,0 +1,66 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Sửa phòng hát{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">✏️ Sửa phòng hát</h3>
+
+<form method="post" enctype="multipart/form-data" class="col-md-6">
+    <div class="mb-3">
+        <label>Tên phòng</label>
+        <input type="text" name="TenPhong" class="form-control"
+               value="{{ phong.TenPhong }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Sức chứa</label>
+        <input type="number" name="SucChua" class="form-control"
+               value="{{ phong.SucChua }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Giá / giờ</label>
+        <input type="number" name="GiaGio" class="form-control"
+               value="{{ phong.GiaGio }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Loại phòng</label>
+        <select name="LoaiPhong" class="form-select">
+            <option value="THUONG" {% if phong.LoaiPhong=='THUONG' %}selected{% endif %}>Thường</option>
+            <option value="VIP" {% if phong.LoaiPhong=='VIP' %}selected{% endif %}>VIP</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Trạng thái</label>
+        <select name="TrangThai" class="form-select">
+            <option value="TRONG" {% if phong.TrangThai=='TRONG' %}selected{% endif %}>Trống</option>
+            <option value="BAO_TRI" {% if phong.TrangThai=='BAO_TRI' %}selected{% endif %}>Bảo trì</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Hình ảnh hiện tại</label><br>
+        {% if phong.HinhAnh %}
+        <img src="{{ phong.HinhAnh }}"
+             class="img-thumbnail"
+             width="120">
+        {% else %}
+        <p class="text-muted">Chưa có hình</p>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label>Đổi hình ảnh</label>
+        <input type="file" name="HinhAnh" class="form-control">
+    </div>
+
+    <div class="mb-3">
+        <label>Mô tả</label>
+        <textarea name="MoTa" class="form-control">{{ phong.MoTa }}</textarea>
+    </div>
+
+    <button class="btn btn-success">💾 Cập nhật</button>
+    <a href="{{ url_for('admin_phong_hat') }}" class="btn btn-secondary">⬅ Quay lại</a>
+</form>
+{% endblock %}

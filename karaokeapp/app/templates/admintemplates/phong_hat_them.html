@@ -1,0 +1,52 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Thêm phòng hát{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">➕ Thêm phòng hát</h3>
+
+<form method="post" enctype="multipart/form-data" class="col-md-6">
+    <div class="mb-3">
+        <label>Tên phòng</label>
+        <input type="text" name="TenPhong" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Sức chứa</label>
+        <input type="number" name="SucChua" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Giá / giờ</label>
+        <input type="number" name="GiaGio" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Loại phòng</label>
+        <select name="LoaiPhong" class="form-select">
+            <option value="THUONG">Thường</option>
+            <option value="VIP">VIP</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Trạng thái</label>
+        <select name="TrangThai" class="form-select">
+            <option value="TRONG">Trống</option>
+            <option value="BAO_TRI">Bảo trì</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Hình ảnh phòng</label>
+        <input type="file" name="HinhAnh" class="form-control">
+    </div>
+
+    <div class="mb-3">
+        <label>Mô tả</label>
+        <textarea name="MoTa" class="form-control"></textarea>
+    </div>
+
+    <button class="btn btn-success">💾 Lưu</button>
+    <a href="{{ url_for('admin_phong_hat') }}" class="btn btn-secondary">⬅ Quay lại</a>
+</form>
+{% endblock %}

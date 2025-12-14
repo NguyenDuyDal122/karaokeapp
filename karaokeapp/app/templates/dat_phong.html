@@ -95,7 +95,8 @@
     <input type="number" name="so_nguoi" min="1" max="{{ room.SucChua }}"
            value="{{ dat_phong_info.get('so_nguoi', '') }}" required>
 
-    <button type="submit" name="them_dich_vu" value="1" style="background-color:#28a745;margin-bottom:20px;">➕ Dịch vụ</button>
+    <button type="submit" name="them_dich_vu" value="1" style="background-color:#28a745;margin-bottom:20px;">➕ Dịch vụ
+    </button>
 
     <label>Dịch vụ đã chọn:</label>
     {% if selected_services %}
@@ -116,7 +117,7 @@
                 background: #f9f9f9;
             ">
             {% if dv.HinhAnh %}
-            <img src="{{ url_for('static', filename=dv.HinhAnh) }}"
+            <img src="{{ dv.HinhAnh }}"
                  alt="{{ dv.TenDichVu }}"
                  style="width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;">
             {% endif %}
@@ -129,6 +130,15 @@
     {% else %}
     <p>Chưa có dịch vụ nào được chọn.</p>
     {% endif %}
+
+    {% if session.role == 'nhanvien' %}
+    <label>Phương thức thanh toán:</label>
+    <select name="phuong_thuc_tt" required>
+        <option value="TIEN_MAT">Tiền mặt</option>
+        <option value="CHUYEN_KHOAN">Chuyển khoản</option>
+    </select>
+    {% endif %}
+
 
     <!-- Nút thanh toán -->
     <button type="submit" name="thanh_toan" value="1">✅ Thanh toán</button>

@@ -1,0 +1,62 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Quản lý tài khoản{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">👤 Quản lý tài khoản</h3>
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-primary text-center">
+        <tr>
+            <th>ID</th>
+            <th>Tên đăng nhập</th>
+            <th>Vai trò</th>
+            <th>Trạng thái</th>
+            <th width="220">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tk in ds_tk %}
+        <tr class="text-center">
+            <td>{{ tk.MaTaiKhoan }}</td>
+            <td>{{ tk.TenDangNhap }}</td>
+
+            <!-- VAI TRÒ (CHỈ XEM) -->
+            <td>
+                <span class="badge bg-info text-dark">
+                    {{ tk.VaiTro }}
+                </span>
+            </td>
+
+            <!-- TRẠNG THÁI -->
+            <td>
+                {% if tk.TrangThai %}
+                    <span class="badge bg-success">Hoạt động</span>
+                {% else %}
+                    <span class="badge bg-danger">Đã khóa</span>
+                {% endif %}
+            </td>
+
+            <!-- HÀNH ĐỘNG -->
+            <td>
+                <a href="{{ url_for('khoa_tai_khoan', ma_tk=tk.MaTaiKhoan) }}"
+                   class="btn btn-sm btn-warning">
+                    {% if tk.TrangThai %}
+                        🔒 Khóa
+                    {% else %}
+                        🔓 Mở
+                    {% endif %}
+                </a>
+
+                {% if tk.VaiTro != 'ADMIN' %}
+                <a href="{{ url_for('xoa_tai_khoan', ma_tk=tk.MaTaiKhoan) }}"
+                   class="btn btn-sm btn-danger"
+                   onclick="return confirm('Xóa tài khoản này?')">
+                    🗑️ Xóa
+                </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

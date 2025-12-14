@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hóa đơn</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 13px;
+        }
+        h2 {
+            text-align: center;
+            color: #007BFF;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 6px;
+        }
+        th {
+            background: #007BFF;
+            color: white;
+        }
+        .right {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+
+<h2>HÓA ĐƠN ĐẶT PHÒNG</h2>
+
+<p><strong>Phòng:</strong> {{ hoa_don.dat_phong.phong.TenPhong }}</p>
+<p><strong>Khách hàng:</strong> {{ hoa_don.dat_phong.khach_hang.HoTen }}</p>
+<p><strong>Ngày lập:</strong> {{ hoa_don.NgayLap.strftime('%d/%m/%Y %H:%M') }}</p>
+
+<p><strong>Thời gian:</strong>
+    {{ hoa_don.dat_phong.ThoiGianBatDau.strftime('%d/%m/%Y %H:%M') }}
+    -
+    {{ hoa_don.dat_phong.ThoiGianKetThuc.strftime('%d/%m/%Y %H:%M') }}
+</p>
+
+<p><strong>Số người:</strong> {{ hoa_don.dat_phong.SoNguoi }}</p>
+<p><strong>Phương thức thanh toán:</strong> {{ hoa_don.PhuongThucThanhToan }}</p>
+
+{% if hoa_don.nhan_vien %}
+<p><strong>Nhân viên:</strong> {{ hoa_don.nhan_vien.HoTen }}</p>
+{% endif %}
+
+<h3>Dịch vụ đã đặt</h3>
+
+<table>
+    <tr>
+        <th>Tên dịch vụ</th>
+        <th>Số lượng</th>
+        <th>Thành tiền</th>
+    </tr>
+    {% for ct in chi_tiet_dv %}
+    <tr>
+        <td>{{ ct.dich_vu.TenDichVu }}</td>
+        <td class="right">{{ ct.SoLuong }}</td>
+        <td class="right">{{ "{:,.0f}".format(ct.ThanhTien) }} đ</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<table>
+    <tr>
+        <td class="right"><strong>Tiền phòng</strong></td>
+        <td class="right">{{ "{:,.0f}".format(hoa_don.TienPhong) }} đ</td>
+    </tr>
+    <tr>
+        <td class="right"><strong>Tiền dịch vụ</strong></td>
+        <td class="right">{{ "{:,.0f}".format(hoa_don.TienDichVu) }} đ</td>
+    </tr>
+    <tr>
+        <td class="right"><strong>VAT ({{ hoa_don.VAT }}%)</strong></td>
+        <td class="right">
+            {{ "{:,.0f}".format((hoa_don.TienPhong + hoa_don.TienDichVu) * hoa_don.VAT / 100) }} đ
+        </td>
+    </tr>
+    <tr>
+        <td class="right"><strong>Giảm giá</strong></td>
+        <td class="right">{{ "{:,.0f}".format(hoa_don.GiamGia) }} đ</td>
+    </tr>
+    <tr>
+        <td class="right"><strong>TỔNG CỘNG</strong></td>
+        <td class="right"><strong>{{ "{:,.0f}".format(hoa_don.TongTien) }} đ</strong></td>
+    </tr>
+</table>
+
+</body>
+</html>

@@ -111,5 +111,12 @@
     </table>
 
     <a href="{{ url_for('index') }}" class="back-btn">⬅ Quay lại trang chủ</a>
+
+    {% if session.get('role') == 'nhanvien' %}
+    <a href="{{ url_for('xuat_hoa_don_pdf', ma_hoa_don=hoa_don.MaHoaDon) }}"
+       class="back-btn" style="background:#28a745">
+        📄 Xuất hóa đơn PDF
+    </a>
+    {% endif %}
 </div>
 {% endblock %}

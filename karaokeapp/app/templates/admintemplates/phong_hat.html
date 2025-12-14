@@ -1,0 +1,83 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Quản lý phòng hát{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">🎤 Quản lý phòng hát</h3>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <form class="d-flex">
+            <input type="text" name="keyword"
+                   value="{{ keyword or '' }}"
+                   class="form-control"
+                   placeholder="🔍 Tên phòng">
+            <button class="btn btn-primary ms-2">Tìm</button>
+        </form>
+    </div>
+    <div class="col-md-8 text-end">
+        <a href="{{ url_for('them_phong_hat') }}" class="btn btn-success">
+            ➕ Thêm phòng
+        </a>
+    </div>
+</div>
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-primary text-center">
+    <tr>
+        <th>ID</th>
+        <th>Hình ảnh</th>
+        <th>Tên phòng</th>
+        <th>Sức chứa</th>
+        <th>Giá / giờ</th>
+        <th>Loại</th>
+        <th>Trạng thái</th>
+        <th width="200">Thao tác</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for p in ds_phong %}
+    <tr class="text-center align-middle">
+        <td>{{ p.MaPhong }}</td>
+
+        <!-- HÌNH ẢNH -->
+        <td>
+            {% if p.HinhAnh %}
+            <img src="{{ p.HinhAnh }}"
+                 width="90"
+                 height="60"
+                 class="rounded border"
+                 style="object-fit: cover;">
+            {% else %}
+            <span class="text-muted">Không có ảnh</span>
+            {% endif %}
+        </td>
+
+        <td>{{ p.TenPhong }}</td>
+        <td>{{ p.SucChua }}</td>
+        <td>{{ "{:,.0f}".format(p.GiaGio) }} đ</td>
+
+        <td>
+            <span class="badge bg-info">{{ p.LoaiPhong }}</span>
+        </td>
+
+        <td>
+            {% if p.TrangThai == 'TRONG' %}
+            <span class="badge bg-success">Trống</span>
+            {% else %}
+            <span class="badge bg-warning">Bảo trì</span>
+            {% endif %}
+        </td>
+
+        <td>
+            <a href="{{ url_for('sua_phong_hat', ma_phong=p.MaPhong) }}"
+               class="btn btn-sm btn-warning">✏️ Sửa</a>
+
+            <a href="{{ url_for('xoa_phong_hat', ma_phong=p.MaPhong) }}"
+               onclick="return confirm('Xóa phòng này?')"
+               class="btn btn-sm btn-danger">🗑️ Xóa</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

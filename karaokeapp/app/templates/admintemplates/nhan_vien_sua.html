@@ -1,0 +1,24 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Sửa nhân viên{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">✏️ Sửa thông tin nhân viên</h3>
+
+<form method="post" class="col-md-6">
+    <div class="mb-3">
+        <label class="form-label">Họ tên</label>
+        <input type="text" name="HoTen" class="form-control"
+               value="{{ nv.HoTen }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Chức vụ</label>
+        <input type="text" name="ChucVu" class="form-control"
+               value="{{ nv.ChucVu }}">
+    </div>
+
+    <button class="btn btn-success">💾 Lưu</button>
+    <a href="{{ url_for('admin_nhan_vien') }}"
+       class="btn btn-secondary">⬅ Quay lại</a>
+</form>
+{% endblock %}

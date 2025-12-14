@@ -72,7 +72,6 @@ class DatPhong(db.Model):
         Enum('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DANG_HAT', 'DA_THANH_TOAN', 'HUY', name='trangthaidat_enum'),
         default='CHO_XAC_NHAN'
     )
-    GiamGia = db.Column(DECIMAL(5, 2), default=0.00)
 
     __table_args__ = (
         UniqueConstraint("MaPhong", "ThoiGianBatDau", "ThoiGianKetThuc", name="unique_phong_thoigian"),

@@ -1,0 +1,33 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Sửa khách hàng{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">✏️ Sửa khách hàng</h3>
+
+<form method="post" class="col-md-6">
+    <div class="mb-3">
+        <label>Họ tên</label>
+        <input type="text" name="HoTen"
+               class="form-control"
+               value="{{ kh.HoTen }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Số điện thoại</label>
+        <input type="text" name="SoDienThoai"
+               class="form-control"
+               value="{{ kh.SoDienThoai }}" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Email</label>
+        <input type="email" name="Email"
+               class="form-control"
+               value="{{ kh.Email }}">
+    </div>
+
+    <button class="btn btn-success">💾 Lưu</button>
+    <a href="{{ url_for('admin_khach_hang') }}"
+       class="btn btn-secondary">⬅ Quay lại</a>
+</form>
+{% endblock %}

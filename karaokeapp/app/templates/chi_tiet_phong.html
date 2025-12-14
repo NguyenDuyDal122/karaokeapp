@@ -7,7 +7,8 @@
 
     <!-- ẢNH PHÒNG -->
     <div style="flex: 1; min-width:350px;">
-        <img src="{{ url_for('static', filename=room.HinhAnh) }}" alt="{{ room.TenPhong }}"
+        <img src="{{ room.HinhAnh }}"
+             alt="{{ room.TenPhong }}"
              style="width:100%; height:320px; object-fit:cover; border-radius:12px;
                     box-shadow:0 4px 12px rgba(0,0,0,0.15);">
     </div>
@@ -82,7 +83,7 @@
 
 
         {% if room.trang_thai_dat != 'BAO_TRI' %}
-    {% if session.get("role") == "khachhang" %}
+        {% if session.get("role") == "khachhang" %}
         <!-- Nếu là khách hàng: Đặt phòng -->
         <a href="{{ url_for('dat_phong', ma_phong=room.MaPhong) }}"
            style="display:inline-block; margin-top:25px; background-color:#28a745; color:white;
@@ -90,7 +91,7 @@
             🏷️ Đặt phòng ngay
         </a>
 
-    {% elif session.get("role") == "nhanvien" %}
+        {% elif session.get("role") == "nhanvien" %}
         <!-- Nếu là nhân viên: thêm khách hàng -->
         <a href="{{ url_for('them_khach_hang', ma_phong=room.MaPhong) }}"
            style="display:inline-block; margin-top:25px; background-color:#007bff; color:white;
@@ -98,15 +99,15 @@
             🏷️ Đặt phòng ngay
         </a>
 
-    {% else %}
+        {% else %}
         <!-- Nếu chưa đăng nhập -->
         <a href="{{ url_for('login') }}"
            style="display:inline-block; margin-top:25px; background-color:#ffc107; color:black;
                   padding:14px 25px; border-radius:10px; text-decoration:none; font-size:1.1rem; font-weight:600;">
             🔐 Đăng nhập để đặt phòng
         </a>
-    {% endif %}
-{% endif %}
+        {% endif %}
+        {% endif %}
     </div>
 </div>
 

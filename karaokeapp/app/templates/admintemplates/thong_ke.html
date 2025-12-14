@@ -1,0 +1,85 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Thống kê doanh thu{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">📊 Thống kê doanh thu</h3>
+
+<!-- FORM CHỌN LOẠI -->
+<form method="post" class="row mb-4">
+    <div class="col-md-4">
+        <select name="loai" class="form-select">
+            <option value="ngay" {% if loai=='ngay' %}selected{% endif %}>Theo ngày</option>
+            <option value="thang" {% if loai=='thang' %}selected{% endif %}>Theo tháng</option>
+            <option value="nam" {% if loai=='nam' %}selected{% endif %}>Theo năm</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary">📊 Thống kê</button>
+    </div>
+</form>
+
+<!-- TỔNG DOANH THU -->
+<div class="alert alert-success fs-5">
+    💰 <b>Tổng doanh thu:</b> {{ "{:,.0f}".format(tong_dt) }} ₫
+</div>
+
+<div class="row">
+    <!-- BẢNG -->
+    <div class="col-md-6">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark text-center">
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Doanh thu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tg, tien in thong_ke %}
+                <tr class="text-center">
+                    <td>{{ tg }}</td>
+                    <td class="text-end fw-bold text-success">
+                        {{ "{:,.0f}".format(tien) }} ₫
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- BIỂU ĐỒ -->
+    <div class="col-md-6">
+        <canvas id="chartDoanhThu"></canvas>
+    </div>
+</div>
+
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('chartDoanhThu');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ labels | tojson }},
+        datasets: [{
+            label: 'Doanh thu (VNĐ)',
+            data: {{ values | tojson }},
+            backgroundColor: 'rgba(54, 162, 235, 0.7)'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                ticks: {
+                    callback: value => value.toLocaleString() + ' ₫'
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

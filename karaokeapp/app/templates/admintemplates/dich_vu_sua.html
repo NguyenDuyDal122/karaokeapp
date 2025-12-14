@@ -1,0 +1,38 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Sửa dịch vụ{% endblock %}
+
+{% block content %}
+<h3>✏️ Sửa dịch vụ</h3>
+
+<form method="post" enctype="multipart/form-data" class="col-md-6">
+    <div class="mb-3">
+        <label>Tên dịch vụ</label>
+        <input type="text" name="TenDichVu"
+               value="{{ dv.TenDichVu }}" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Đơn giá</label>
+        <input type="number" name="DonGia"
+               value="{{ dv.DonGia }}" class="form-control" required>
+    </div>
+
+    {% if dv.HinhAnh %}
+    <img src="{{ dv.HinhAnh }}" class="mb-2"
+         style="width:120px;border-radius:10px;">
+    {% endif %}
+
+    <div class="mb-3">
+        <label>Ảnh mới (nếu đổi)</label>
+        <input type="file" name="HinhAnh" class="form-control">
+    </div>
+
+    <div class="mb-3">
+        <label>Mô tả</label>
+        <textarea name="MoTa" class="form-control">{{ dv.MoTa }}</textarea>
+    </div>
+
+    <button class="btn btn-success">💾 Cập nhật</button>
+    <a href="{{ url_for('admin_dich_vu') }}" class="btn btn-secondary">⬅ Quay lại</a>
+</form>
+{% endblock %}

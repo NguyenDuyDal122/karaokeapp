@@ -1,0 +1,83 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Quản lý hóa đơn{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">🧾 Quản lý hóa đơn</h3>
+
+<form class="row mb-3">
+    <div class="col-md-4">
+        <input type="text"
+               name="keyword"
+               value="{{ keyword or '' }}"
+               class="form-control"
+               placeholder="🔍 Tên khách hoặc SĐT">
+    </div>
+
+    <div class="col-md-2">
+        <button class="btn btn-primary">
+            Tìm kiếm
+        </button>
+    </div>
+</form>
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-dark text-center">
+        <tr>
+            <th>ID</th>
+            <th>Phòng</th>
+            <th>Khách hàng</th>
+            <th>Ngày lập</th>
+            <th>Tiền phòng</th>
+            <th>Tiền dịch vụ</th>
+            <th>VAT</th>
+            <th>Tổng tiền</th>
+            <th>Thanh toán</th>
+            <th>Nguồn</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for hd in hoa_dons %}
+        <tr class="text-center">
+            <td>{{ hd.MaHoaDon }}</td>
+
+            <td>{{ hd.dat_phong.phong.TenPhong }}</td>
+
+            <td>{{ hd.dat_phong.khach_hang.HoTen }}</td>
+
+            <td>{{ hd.NgayLap.strftime("%d/%m/%Y %H:%M") }}</td>
+
+            <td class="text-end">
+                {{ "{:,.0f}".format(hd.TienPhong) }} ₫
+            </td>
+
+            <td class="text-end">
+                {{ "{:,.0f}".format(hd.TienDichVu) }} ₫
+            </td>
+
+            <td>{{ hd.VAT }}%</td>
+
+            <td class="text-end fw-bold text-success">
+                {{ "{:,.0f}".format(hd.TongTien) }} ₫
+            </td>
+
+            <td>
+                {% if hd.PhuongThucThanhToan == 'TIEN_MAT' %}
+                    <span class="badge bg-success">Tiền mặt</span>
+                {% else %}
+                    <span class="badge bg-primary">Chuyển khoản</span>
+                {% endif %}
+            </td>
+
+            <td>
+                {% if hd.Nguon == 'ONLINE' %}
+                    <span class="badge bg-info">Online</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Tại quầy</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

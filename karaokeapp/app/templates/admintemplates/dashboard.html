@@ -1,0 +1,122 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Trang quản trị{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4 text-primary fw-bold">📊 BẢNG ĐIỀU KHIỂN QUẢN TRỊ</h2>
+
+<!-- HÀNG CHỨC NĂNG -->
+<div class="row">
+
+    <!-- PHÒNG HÁT -->
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <div class="fs-1">🎤</div>
+                <h5 class="fw-bold mt-2">Phòng hát</h5>
+                <p class="text-muted">Quản lý phòng, giá giờ</p>
+                <a href="{{ url_for('admin_phong_hat') }}" class="btn btn-primary w-100">
+                    Quản lý
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ĐẶT PHÒNG -->
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <div class="fs-1">📅</div>
+                <h5 class="fw-bold mt-2">Đặt phòng</h5>
+                <p class="text-muted">Xác nhận & cập nhật trạng thái</p>
+                <a href="{{ url_for('admin_dat_phong') }}" class="btn btn-info w-100">
+                    Quản lý
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- DỊCH VỤ -->
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <div class="fs-1">🍹</div>
+                <h5 class="fw-bold mt-2">Dịch vụ</h5>
+                <p class="text-muted">Đồ uống, thức ăn</p>
+                <a href="{{ url_for('admin_dich_vu') }}" class="btn btn-warning w-100">
+                    Quản lý
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- HÓA ĐƠN -->
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 shadow-sm text-center">
+            <div class="card-body">
+                <div class="fs-1">🧾</div>
+                <h5 class="fw-bold mt-2">Hóa đơn</h5>
+                <p class="text-muted">Theo dõi thanh toán</p>
+                <a href="{{ url_for('admin_hoa_don') }}" class="btn btn-success w-100">
+                    Xem
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- BIỂU ĐỒ DOANH THU -->
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-success mb-0">
+                        📈 Doanh thu theo năm
+                    </h5>
+                    <a href="{{ url_for('admin_thong_ke') }}" class="btn btn-outline-success btn-sm">
+                        Xem chi tiết
+                    </a>
+                </div>
+
+                <canvas id="revenueChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CHART JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('revenueChart');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ labels | tojson }},
+        datasets: [{
+            label: 'Doanh thu (VNĐ)',
+            data: {{ values | tojson }},
+            backgroundColor: 'rgba(25, 135, 84, 0.7)'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('vi-VN') + ' ₫';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

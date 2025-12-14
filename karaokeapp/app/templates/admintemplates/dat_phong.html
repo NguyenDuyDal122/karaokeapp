@@ -1,0 +1,105 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Quản lý đặt phòng{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">📅 Quản lý đặt phòng</h3>
+
+<form class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" name="keyword"
+               value="{{ keyword or '' }}"
+               class="form-control"
+               placeholder="🔍 Tên khách / phòng">
+    </div>
+
+    <div class="col-md-3">
+        <select name="trang_thai" class="form-select">
+            <option value="">-- Tất cả trạng thái --</option>
+            {% for tt in ['CHO_XAC_NHAN','DA_XAC_NHAN','DANG_HAT','DA_THANH_TOAN','HUY'] %}
+            <option value="{{ tt }}" {% if trang_thai==tt %}selected{% endif %}>
+                {{ tt.replace('_',' ') }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <button class="btn btn-primary">Lọc</button>
+    </div>
+</form>
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-primary text-center">
+        <tr>
+            <th>ID</th>
+            <th>Khách hàng</th>
+            <th>Phòng</th>
+            <th>Thời gian</th>
+            <th>Số người</th>
+            <th>Trạng thái</th>
+            <th width="260">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for dp in ds_dat %}
+        <tr class="text-center">
+            <td>{{ dp.MaDatPhong }}</td>
+            <td>{{ dp.khach_hang.HoTen }}</td>
+            <td>{{ dp.phong.TenPhong }}</td>
+            <td>
+                {{ dp.ThoiGianBatDau.strftime("%d/%m %H:%M") }} <br>
+                → {{ dp.ThoiGianKetThuc.strftime("%H:%M") }}
+            </td>
+            <td>{{ dp.SoNguoi }}</td>
+
+            <!-- ===== TRẠNG THÁI ===== -->
+            <td>
+                {% if dp.TrangThai == 'CHO_XAC_NHAN' %}
+                    <span class="badge bg-secondary">Chờ xác nhận</span>
+                {% elif dp.TrangThai == 'DA_XAC_NHAN' %}
+                    <span class="badge bg-primary">Đã xác nhận</span>
+                {% elif dp.TrangThai == 'DANG_HAT' %}
+                    <span class="badge bg-success">Đang hát</span>
+                {% elif dp.TrangThai == 'DA_THANH_TOAN' %}
+                    <span class="badge bg-warning text-dark">Đã thanh toán</span>
+                {% else %}
+                    <span class="badge bg-danger">Đã hủy</span>
+                {% endif %}
+            </td>
+
+            <!-- ===== THAO TÁC ===== -->
+            <td>
+                {% if dp.TrangThai == 'CHO_XAC_NHAN' %}
+                    <a href="{{ url_for('cap_nhat_trang_thai_dat_phong',
+                                        ma_dp=dp.MaDatPhong,
+                                        trang_thai='DA_XAC_NHAN') }}"
+                       class="btn btn-sm btn-success mb-1">✔ Xác nhận</a>
+                {% endif %}
+
+                {% if dp.TrangThai == 'DA_XAC_NHAN' %}
+                    <a href="{{ url_for('cap_nhat_trang_thai_dat_phong',
+                                        ma_dp=dp.MaDatPhong,
+                                        trang_thai='DANG_HAT') }}"
+                       class="btn btn-sm btn-primary mb-1">🎤 Đang hát</a>
+                {% endif %}
+
+                {% if dp.TrangThai == 'DANG_HAT' %}
+                    <a href="{{ url_for('cap_nhat_trang_thai_dat_phong',
+                                        ma_dp=dp.MaDatPhong,
+                                        trang_thai='DA_THANH_TOAN') }}"
+                       class="btn btn-sm btn-warning mb-1">💰 Thanh toán</a>
+                {% endif %}
+
+                {% if dp.TrangThai not in ['HUY', 'DA_THANH_TOAN'] %}
+                    <a href="{{ url_for('cap_nhat_trang_thai_dat_phong',
+                                        ma_dp=dp.MaDatPhong,
+                                        trang_thai='HUY') }}"
+                       onclick="return confirm('Hủy đặt phòng này?')"
+                       class="btn btn-sm btn-danger mb-1">❌ Hủy</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

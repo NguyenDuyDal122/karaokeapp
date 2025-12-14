@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Admin{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #00C6FF, #007BFF);
+            margin: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            min-height: 100vh;
+            background-color: #ffffff;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            border-radius: 0 20px 20px 0;
+        }
+
+        .sidebar h5 {
+            color: #007BFF;
+            font-weight: bold;
+        }
+
+        .sidebar .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #6c757d;
+            margin: 16px 12px 6px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-link {
+            color: #007BFF;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin: 4px 8px;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: #007BFF;
+            color: #fff;
+        }
+
+        /* Content */
+        .content-wrapper {
+            padding: 30px;
+        }
+
+        .content-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-height: calc(100vh - 60px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- SIDEBAR -->
+        <nav class="col-md-2 sidebar p-3">
+            <h5 class="text-center mb-4">🎤 KARAOKE ADMIN</h5>
+
+            <ul class="nav flex-column">
+
+                <!-- DASHBOARD -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                </li>
+
+                <!-- TÀI KHOẢN -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_tai_khoan') }}">
+                        <i class="bi bi-person-gear me-2"></i> Quản lý tài khoản
+                    </a>
+                </li>
+
+                <!-- KHÁCH HÀNG -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_khach_hang') }}">
+                        <i class="bi bi-people me-2"></i> Khách hàng
+                    </a>
+                </li>
+
+                <!-- NHÂN VIÊN -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_nhan_vien') }}">
+                        <i class="bi bi-person-badge me-2"></i> Quản lý nhân viên
+                    </a>
+                </li>
+
+                <!-- PHÒNG & DỊCH VỤ -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_phong_hat') }}">
+                        <i class="bi bi-mic me-2"></i> Phòng hát
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_dich_vu') }}">
+                        <i class="bi bi-cup-hot me-2"></i> Dịch vụ
+                    </a>
+                </li>
+
+                <!-- ĐẶT PHÒNG -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_dat_phong') }}">
+                        <i class="bi bi-calendar-check me-2"></i> Lịch đặt phòng
+                    </a>
+                </li>
+
+                <!-- HÓA ĐƠN -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_hoa_don') }}">
+                        <i class="bi bi-receipt me-2"></i> Hóa đơn
+                    </a>
+                </li>
+
+                <!-- THỐNG KÊ -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_thong_ke') }}">
+                        <i class="bi bi-bar-chart-line me-2"></i> Thống kê - báo cáo
+                    </a>
+                </li>
+
+                <!-- LOGOUT -->
+                <li class="nav-item">
+                    <a class="nav-link text-danger" href="{{ url_for('logout') }}">
+                        <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="col-md-10 content-wrapper">
+            <div class="content-box">
+
+                <!-- FLASH -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+
+            </div>
+        </main>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

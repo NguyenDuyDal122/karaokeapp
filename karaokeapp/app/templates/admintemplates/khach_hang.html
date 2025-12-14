@@ -1,0 +1,68 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Quản lý khách hàng{% endblock %}
+
+{% block content %}
+<h3 class="mb-4">👥 Quản lý khách hàng</h3>
+
+<form class="row mb-3">
+    <div class="col-md-4">
+        <input type="text"
+               name="keyword"
+               value="{{ keyword or '' }}"
+               class="form-control"
+               placeholder="🔍 Tên / SĐT / Email">
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary">Tìm kiếm</button>
+    </div>
+</form>
+
+<table class="table table-bordered table-hover align-middle">
+    <thead class="table-primary text-center">
+        <tr>
+            <th>ID</th>
+            <th>Họ tên</th>
+            <th>SĐT</th>
+            <th>Email</th>
+            <th>Lượt đặt tháng</th>
+            <th>Trạng thái</th>
+            <th width="200">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for kh in ds_khach %}
+        <tr class="text-center">
+            <td>{{ kh.MaKhachHang }}</td>
+            <td>{{ kh.HoTen }}</td>
+            <td>{{ kh.SoDienThoai }}</td>
+            <td>{{ kh.Email }}</td>
+            <td>
+                <span class="badge bg-info">{{ kh.SoLuotDatThang }}</span>
+            </td>
+            <td>
+                {% if kh.tai_khoan and kh.tai_khoan.TrangThai %}
+                    <span class="badge bg-success">Hoạt động</span>
+                {% else %}
+                    <span class="badge bg-danger">Đã khóa</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{{ url_for('sua_khach_hang', ma_kh=kh.MaKhachHang) }}"
+                   class="btn btn-sm btn-warning">✏️ Sửa</a>
+
+                {% if kh.tai_khoan %}
+                <a href="{{ url_for('khoa_khach_hang', ma_kh=kh.MaKhachHang) }}"
+                   class="btn btn-sm btn-secondary">
+                    {% if kh.tai_khoan.TrangThai %}
+                        🔒 Khóa
+                    {% else %}
+                        🔓 Mở
+                    {% endif %}
+                </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "admintemplates/admin_base.html" %}
+{% block title %}Thêm dịch vụ{% endblock %}
+
+{% block content %}
+<h3>➕ Thêm dịch vụ</h3>
+
+<form method="post" enctype="multipart/form-data" class="col-md-6">
+    <div class="mb-3">
+        <label>Tên dịch vụ</label>
+        <input type="text" name="TenDichVu" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Đơn giá</label>
+        <input type="number" name="DonGia" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label>Ảnh</label>
+        <input type="file" name="HinhAnh" class="form-control">
+    </div>
+
+    <div class="mb-3">
+        <label>Mô tả</label>
+        <textarea name="MoTa" class="form-control"></textarea>
+    </div>
+
+    <button class="btn btn-success">💾 Lưu</button>
+    <a href="{{ url_for('admin_dich_vu') }}" class="btn btn-secondary">⬅ Quay lại</a>
+</form>
+{% endblock %}
