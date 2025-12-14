@@ -12,14 +12,18 @@ def get_tai_khoan_by_ten_dang_nhap(username):
     return TaiKhoan.query.filter_by(TenDangNhap=username).first()
 
 def check_login(username, password):
-    user = TaiKhoan.query.filter_by(
-        TenDangNhap=username,
-        TrangThai=True
-    ).first()
+    user = TaiKhoan.query.filter_by(TenDangNhap=username).first()
 
-    if user and check_password_hash(user.MatKhau, password):
-        return user
-    return None
+    if not user:
+        return None, "❌ Sai tài khoản hoặc mật khẩu!"
+
+    if not check_password_hash(user.MatKhau, password):
+        return None, "❌ Sai tài khoản hoặc mật khẩu!"
+
+    if not user.TrangThai:
+        return None, "🔒 Tài khoản của bạn đã bị khóa. Vui lòng liên hệ admin!"
+
+    return user, None
 
 
 # =========================

@@ -36,28 +36,30 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        user = dao.check_login(
-            request.form.get("username"),
-            request.form.get("password")
-        )
+        username = request.form.get("username")
+        password = request.form.get("password")
 
-        if user:
-            session["user"] = user.TenDangNhap
-            session["role"] = user.VaiTro.lower()
+        user, error = dao.check_login(username, password)
 
-            if session["role"] == "khachhang":
-                session["user_id"] = user.khach_hang.MaKhachHang
-                return redirect(url_for("index"))
+        if error:
+            flash(error, "danger")
+            return render_template("index.html")
 
-            elif session["role"] == "nhanvien":
-                session["user_id"] = user.nhan_vien.MaNhanVien
-                return redirect(url_for("index"))
+        # ===== ĐĂNG NHẬP THÀNH CÔNG =====
+        session["user"] = user.TenDangNhap
+        session["role"] = user.VaiTro.lower()
 
-            elif session["role"] == "admin":
-                session["user_id"] = user.MaTaiKhoan
-                return redirect(url_for("admin_dashboard"))  # ✅ VÀO ADMIN
+        if session["role"] == "khachhang":
+            session["user_id"] = user.khach_hang.MaKhachHang
+            return redirect(url_for("index"))
 
-        flash("❌ Sai tài khoản hoặc mật khẩu!", "danger")
+        elif session["role"] == "nhanvien":
+            session["user_id"] = user.nhan_vien.MaNhanVien
+            return redirect(url_for("index"))
+
+        elif session["role"] == "admin":
+            session["user_id"] = user.MaTaiKhoan
+            return redirect(url_for("admin_dashboard"))
 
     return render_template("index.html")
 
