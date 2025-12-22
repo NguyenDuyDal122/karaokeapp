@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Thanh toán dịch vụ phát sinh{% endblock %}
+
+{% block content %}
+<h2>🧾 Hóa đơn dịch vụ phát sinh</h2>
+
+<div style="background:#f8f9fa; padding:20px; border-radius:10px">
+
+    <p><b>Mã hóa đơn:</b> {{ hdps.MaHDPhatSinh }}</p>
+    <p><b>Ngày lập:</b> {{ hdps.NgayLap.strftime("%d/%m/%Y %H:%M") }}</p>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:15px">
+        <tr style="background:#007bff; color:white">
+            <th>Dịch vụ</th>
+            <th>Số lượng</th>
+            <th>Thành tiền</th>
+        </tr>
+
+        {% for ct in hdps.chi_tiet %}
+        <tr>
+            <td>{{ ct.dich_vu.TenDichVu }}</td>
+            <td style="text-align:center">{{ ct.SoLuong }}</td>
+            <td style="text-align:right">{{ "{:,.0f}".format(ct.ThanhTien) }} đ</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h3 style="margin-top:15px; color:#dc3545">
+        Tổng tiền: {{ "{:,.0f}".format(hdps.TongTien) }} đ
+    </h3>
+
+    <form method="post">
+        <h4>💳 Phương thức thanh toán</h4>
+
+        <label>
+            <input type="radio" name="phuong_thuc_tt" value="TIEN_MAT" checked>
+            Tiền mặt
+        </label><br>
+
+        <label>
+            <input type="radio" name="phuong_thuc_tt" value="CHUYEN_KHOAN">
+            Chuyển khoản
+        </label>
+
+        <br><br>
+        <button type="submit"
+                style="padding:10px 20px; background:#28a745; color:white;
+                       border:none; border-radius:6px">
+            ✅ Xác nhận thanh toán
+        </button>
+    </form>
+</div>
+{% endblock %}

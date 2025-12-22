@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Phòng đang hát{% endblock %}
+
+{% block content %}
+<h2>🎤 Phòng đang hát</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div style="
+          padding: 12px;
+          margin: 10px 0;
+          border-radius: 6px;
+          font-weight: 500;
+          {% if category == 'success' %}
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+          {% elif category == 'warning' %}
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+          {% elif category == 'danger' %}
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+          {% endif %}
+      ">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{% if ds_dat_phong %}
+<table style="width:100%; border-collapse:collapse">
+    <tr style="background:#6f42c1; color:white">
+        <th>Phòng</th>
+        <th>Khách</th>
+        <th>Thời gian</th>
+        <th>Hành động</th>
+    </tr>
+
+    {% for dp in ds_dat_phong %}
+    <tr>
+        <td>{{ dp.phong.TenPhong }}</td>
+        <td>{{ dp.khach_hang.HoTen }}</td>
+        <td>
+            {{ dp.ThoiGianBatDau.strftime("%H:%M") }} -
+            {{ dp.ThoiGianKetThuc.strftime("%H:%M") }}
+        </td>
+        <td>
+            <a href="{{ url_for('chon_dich_vu_phat_sinh', ma_dat_phong=dp.MaDatPhong) }}"
+               style="padding:6px 12px; background:#ffc107; color:black; border-radius:6px; text-decoration:none">
+                ➕ Thêm dịch vụ
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>Không có phòng nào đang hát.</p>
+{% endif %}
+{% endblock %}

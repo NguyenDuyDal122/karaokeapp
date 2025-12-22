@@ -1,8 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 from os import abort
 from flask import make_response
 from app import app, dao, db
-from app.models import PhongHat, ChiTietDatDichVu, HoaDon, DatPhong, DichVu, KhachHang, TaiKhoan, NhanVien
+from app.models import PhongHat, ChiTietDatDichVu, HoaDon, DatPhong, DichVu, KhachHang, TaiKhoan, NhanVien, \
+    ChiTietHoaDonDichVuPhatSinh, HoaDonDichVuPhatSinh
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import session, flash, redirect, url_for, render_template, request
 from xhtml2pdf import pisa
@@ -157,12 +159,20 @@ def dat_phong(ma_phong):
                 return redirect(url_for("them_khach_hang", ma_phong=ma_phong))
 
         # --- Tạo đặt phòng ---
+        # --- Xác định trạng thái ban đầu ---
+        if session["role"] == "nhanvien":
+            trang_thai_ban_dau = "DA_XAC_NHAN"
+        else:
+            trang_thai_ban_dau = "CHO_XAC_NHAN"
+
+        # --- Tạo đặt phòng ---
         dp = dao.tao_dat_phong(
             ma_phong,
             ma_khach_hang,
             tg_bd,
             tg_kt,
-            so_nguoi
+            so_nguoi,
+            trang_thai_ban_dau
         )
 
         # --- Lưu dịch vụ ---
@@ -175,22 +185,105 @@ def dat_phong(ma_phong):
             # khách hàng online luôn chuyển khoản
             phuong_thuc_tt = "CHUYEN_KHOAN"
 
-        # --- Tạo hóa đơn ---
-        hoa_don = dao.tao_hoa_don(dp, room, session, phuong_thuc_tt)
+        # --- KHÁCH HÀNG: tạo hóa đơn ngay ---
+        if session.get("role") == "khachhang":
+            hoa_don = dao.tao_hoa_don(
+                dp,
+                room,
+                session,
+                phuong_thuc_tt="CHUYEN_KHOAN"
+            )
 
-        # --- Dọn session ---
+            # --- Dọn session ---
+            session.pop("selected_services", None)
+            session.pop("dat_phong_info", None)
+            session.pop("khachhang_dat_phong", None)
+
+            return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+        # --- NHÂN VIÊN: CHỈ ĐẶT PHÒNG ---
+        flash("✅ Đặt phòng thành công. Khách sẽ thanh toán sau khi hát xong.", "success")
+
         session.pop("selected_services", None)
         session.pop("dat_phong_info", None)
         session.pop("khachhang_dat_phong", None)
 
-        return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+        return redirect(url_for("chi_tiet_dat_phong", ma_dat_phong=dp.MaDatPhong))
 
     return render_template(
         "dat_phong.html",
         room=room,
         selected_services=selected_services,
         selected_services_data=selected_services_data,
-        dat_phong_info=dat_phong_info
+        dat_phong_info=dat_phong_info,
+        back_url=url_for("dat_phong", ma_phong=room.MaPhong)
+    )
+
+@app.route("/thanh-toan-phong")
+def thanh_toan_phong():
+    if session.get("role") != "nhanvien":
+        flash("Bạn không có quyền truy cập!", "danger")
+        return redirect(url_for("index"))
+
+    # Lấy các đặt phòng CHƯA THANH TOÁN
+    ds_dat_phong = DatPhong.query.filter_by(TrangThai="CHUA_THANH_TOAN").all()
+
+    return render_template(
+        "thanh_toan_phong.html",
+        ds_dat_phong=ds_dat_phong
+    )
+
+@app.route("/lap-hoa-don/<int:ma_dat_phong>", methods=["POST"])
+def lap_hoa_don(ma_dat_phong):
+    if session.get("role") != "nhanvien":
+        flash("Bạn không có quyền!", "danger")
+        return redirect(url_for("index"))
+
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
+
+    if dp.TrangThai == "DA_THANH_TOAN":
+        flash("Phòng này đã thanh toán!", "warning")
+        return redirect(url_for("thanh_toan_phong"))
+
+    phuong_thuc_tt = request.form.get("phuong_thuc_tt")
+
+    if phuong_thuc_tt not in ["TIEN_MAT", "CHUYEN_KHOAN"]:
+        flash("Phương thức thanh toán không hợp lệ!", "danger")
+        return redirect(url_for("thanh_toan_phong"))
+
+    room = dp.phong
+
+    hoa_don = dao.tao_hoa_don(
+        dp=dp,
+        room=room,
+        session=session,
+        phuong_thuc_tt=phuong_thuc_tt
+    )
+
+    # Đã thanh toán phòng
+    dp.TrangThai = "DA_THANH_TOAN"
+
+    # ✅ Đã thanh toán toàn bộ dịch vụ phát sinh
+    for hdps in hoa_don.hoa_don_phat_sinh:
+        hdps.TrangThai = "DA_THANH_TOAN"
+
+    db.session.commit()
+
+    return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+
+@app.route("/dat-phong/<int:ma_dat_phong>/chi-tiet")
+def chi_tiet_dat_phong(ma_dat_phong):
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
+
+    # Chỉ nhân viên được xem màn này
+    if session.get("role") != "nhanvien":
+        flash("Bạn không có quyền truy cập!", "danger")
+        return redirect(url_for("index"))
+
+    return render_template(
+        "chi_tiet_dat_phong.html",
+        dp=dp
     )
 
 @app.route("/dat-phong/<int:ma_phong>/them-dich-vu", methods=["GET", "POST"])
@@ -231,11 +324,11 @@ def them_dich_vu(ma_phong):
 
 @app.route("/hoa-don/<int:ma_hoa_don>")
 def xem_hoa_don(ma_hoa_don):
-
     hoa_don = dao.get_hoa_don_by_id(ma_hoa_don)
     if not hoa_don:
         abort(404)
 
+    # lấy chi tiết dịch vụ theo đặt phòng
     chi_tiet_dv = dao.get_chi_tiet_dich_vu_by_dat_phong(
         hoa_don.MaDatPhong
     )
@@ -409,6 +502,141 @@ def them_khach_hang(ma_phong):
         return redirect(url_for("dat_phong", ma_phong=ma_phong))
 
     return render_template("them_khach_hang.html", ma_phong=ma_phong)
+
+
+@app.route("/nhan-vien/them-dv-phat-sinh/<int:ma_dat_phong>")
+def chon_dich_vu_phat_sinh(ma_dat_phong):
+    if session.get("role") != "nhanvien":
+        flash("Không có quyền", "danger")
+        return redirect(url_for("index"))
+
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
+    ds_dich_vu = DichVu.query.all()
+
+    return render_template(
+        "chon_dich_vu.html",
+        dp=dp,
+        services=ds_dich_vu,
+        ma_phong=dp.phong.MaPhong,
+        back_url = url_for("phong_dang_hat")
+    )
+
+
+@app.route("/nhan-vien/phong-dang-hat")
+def phong_dang_hat():
+    if session.get("role") != "nhanvien":
+        flash("Không có quyền", "danger")
+        return redirect(url_for("index"))
+
+    ds_dat_phong = DatPhong.query.filter_by(TrangThai="DANG_HAT").all()
+
+    return render_template(
+        "them_dich_vu_phat_sinh.html",
+        ds_dat_phong=ds_dat_phong
+    )
+
+@app.route("/nhan-vien/luu-dv-phat-sinh/<int:ma_dat_phong>", methods=["POST"])
+def luu_dv_phat_sinh(ma_dat_phong):
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
+    dich_vu_ids = request.form.getlist("dich_vu")
+
+    if not dich_vu_ids:
+        flash("⚠️ Chưa chọn dịch vụ", "warning")
+        return redirect(url_for("phong_dang_hat"))
+
+    hd = dp.hoa_don  # có hoặc không
+
+    # ===============================
+    # TRƯỜNG HỢP 1: ĐÃ CÓ HÓA ĐƠN
+    # ===============================
+    if hd:
+        hdps = HoaDonDichVuPhatSinh(
+            MaHoaDon=hd.MaHoaDon,
+            MaNhanVien=session["user_id"]
+        )
+        db.session.add(hdps)
+        db.session.flush()
+
+        tong = Decimal("0")
+
+        for dv_id in dich_vu_ids:
+            so_luong = int(request.form.get(f"soluong_{dv_id}", 1))
+            dv = DichVu.query.get(dv_id)
+
+            ct = ChiTietHoaDonDichVuPhatSinh(
+                MaHDPhatSinh=hdps.MaHDPhatSinh,
+                MaDichVu=dv_id,
+                SoLuong=so_luong,
+                ThanhTien=dv.DonGia * so_luong
+            )
+            tong += ct.ThanhTien
+            db.session.add(ct)
+
+        hdps.TongTien = tong
+        db.session.commit()
+
+        # 👉 chuyển sang giao diện thanh toán
+        return redirect(
+            url_for("thanh_toan_dv_phat_sinh", ma_hdps=hdps.MaHDPhatSinh)
+        )
+
+    # ===============================
+    # TRƯỜNG HỢP 2: CHƯA CÓ HÓA ĐƠN
+    # ===============================
+    else:
+        for dv_id in dich_vu_ids:
+            so_luong = int(request.form.get(f"soluong_{dv_id}", 1))
+            dv = DichVu.query.get(dv_id)
+
+            ct = ChiTietDatDichVu.query.filter_by(
+                MaDatPhong=dp.MaDatPhong,
+                MaDichVu=dv_id
+            ).first()
+
+            if ct:
+                ct.SoLuong += so_luong
+                ct.ThanhTien += dv.DonGia * so_luong
+            else:
+                ct = ChiTietDatDichVu(
+                    MaDatPhong=dp.MaDatPhong,
+                    MaDichVu=dv_id,
+                    SoLuong=so_luong,
+                    ThanhTien=dv.DonGia * so_luong
+                )
+                db.session.add(ct)
+
+        db.session.commit()
+
+        flash("✅ Đã cộng thêm tiền dịch vụ", "success")
+        return redirect(url_for("phong_dang_hat"))
+
+@app.route("/nhan-vien/thanh-toan-dv-phat-sinh/<int:ma_hdps>", methods=["GET", "POST"])
+def thanh_toan_dv_phat_sinh(ma_hdps):
+    if session.get("role") != "nhanvien":
+        flash("Không có quyền", "danger")
+        return redirect(url_for("index"))
+
+    hdps = HoaDonDichVuPhatSinh.query.get_or_404(ma_hdps)
+
+    if request.method == "POST":
+        phuong_thuc = request.form.get("phuong_thuc_tt")
+
+        hdps.TrangThai = "DA_THANH_TOAN"
+        db.session.commit()
+
+        flash("✅ Thanh toán dịch vụ phát sinh thành công", "success")
+        return redirect(url_for("phong_dang_hat"))
+
+    return render_template(
+        "thanh_toan_dv_phat_sinh.html",
+        hdps=hdps
+    )
+
+
+
+
+
+
 
 
 

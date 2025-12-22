@@ -81,6 +81,8 @@
         <a href="{{ url_for('thong_tin_tai_khoan') }}">Thông tin tài khoản</a>
         {% elif session.get('role') == 'nhanvien' %}
         <a href="{{ url_for('thong_tin_nhan_vien') }}">Thông tin nhân viên</a>
+        <a href="{{ url_for('thanh_toan_phong') }}">Thanh toán phòng</a>
+        <a href="{{ url_for('phong_dang_hat') }}">Thêm dịch vụ phát sinh</a>
         {% endif %}
         {% if session.get('role', '').lower() == 'khachhang' %}
         <a href="{{ url_for('lich_su_dat_phong') }}">Lịch sử đặt phòng</a>

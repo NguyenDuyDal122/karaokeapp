@@ -60,6 +60,8 @@
                     <span class="badge bg-primary">Đã xác nhận</span>
                 {% elif dp.TrangThai == 'DANG_HAT' %}
                     <span class="badge bg-success">Đang hát</span>
+                {% elif dp.TrangThai == 'CHUA_THANH_TOAN' %}
+                    <span class="badge bg-secondary">Chưa thanh toán</span>
                 {% elif dp.TrangThai == 'DA_THANH_TOAN' %}
                     <span class="badge bg-warning text-dark">Đã thanh toán</span>
                 {% else %}
@@ -84,6 +86,13 @@
                 {% endif %}
 
                 {% if dp.TrangThai == 'DANG_HAT' %}
+                    <a href="{{ url_for('cap_nhat_trang_thai_dat_phong',
+                                        ma_dp=dp.MaDatPhong,
+                                        trang_thai='CHUA_THANH_TOAN') }}"
+                       class="btn btn-sm btn-warning mb-1">Chưa thanh toán</a>
+                {% endif %}
+
+                {% if dp.TrangThai == 'CHUA_THANH_TOAN' %}
                     <a href="{{ url_for('cap_nhat_trang_thai_dat_phong',
                                         ma_dp=dp.MaDatPhong,
                                         trang_thai='DA_THANH_TOAN') }}"

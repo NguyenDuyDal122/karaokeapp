@@ -69,7 +69,7 @@ class DatPhong(db.Model):
     ThoiGianKetThuc = db.Column(db.DateTime, nullable=False)
     SoNguoi = db.Column(db.Integer, nullable=False)
     TrangThai = db.Column(
-        Enum('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DANG_HAT', 'DA_THANH_TOAN', 'HUY', name='trangthaidat_enum'),
+        Enum('CHO_XAC_NHAN', 'DA_XAC_NHAN', 'DANG_HAT', 'CHUA_THANH_TOAN', 'DA_THANH_TOAN', 'HUY', name='trangthaidat_enum'),
         default='CHO_XAC_NHAN'
     )
 
@@ -133,6 +133,11 @@ class HoaDon(db.Model):
     dat_phong = relationship("DatPhong", back_populates="hoa_don")
     nhan_vien = relationship("NhanVien", back_populates="hoa_don")
 
+    hoa_don_phat_sinh = relationship(
+        "HoaDonDichVuPhatSinh",
+        back_populates="hoa_don"
+    )
+
     def tinh_tong_tien(self):
         tong = (self.TienPhong or Decimal('0')) + (self.TienDichVu or Decimal('0'))
         giam_gia = self.GiamGia or Decimal('0')
@@ -140,3 +145,69 @@ class HoaDon(db.Model):
         tong_sau_giam = tong - giam_gia
         tong_co_vat = tong_sau_giam + tong_sau_giam * vat / Decimal('100')
         self.TongTien = tong_co_vat
+
+
+class HoaDonDichVuPhatSinh(db.Model):
+    __tablename__ = "hoa_don_dv_phat_sinh"
+
+    MaHDPhatSinh = db.Column(db.Integer, primary_key=True)
+
+    MaHoaDon = db.Column(
+        db.Integer,
+        ForeignKey("hoa_don.MaHoaDon"),
+        nullable=False
+    )
+
+    MaNhanVien = db.Column(
+        db.Integer,
+        ForeignKey("nhan_vien.MaNhanVien"),
+        nullable=False
+    )
+
+    NgayLap = db.Column(db.DateTime, default=datetime.utcnow)
+
+    TongTien = db.Column(DECIMAL(10, 2), default=0.00)
+
+    TrangThai = db.Column(
+        Enum("CHUA_THANH_TOAN", "DA_THANH_TOAN", name="trangthai_hdps_enum"),
+        default="CHUA_THANH_TOAN"
+    )
+
+    hoa_don = relationship("HoaDon", back_populates="hoa_don_phat_sinh")
+    nhan_vien = relationship("NhanVien")
+    chi_tiet = relationship(
+        "ChiTietHoaDonDichVuPhatSinh",
+        back_populates="hoa_don_phat_sinh",
+        cascade="all, delete-orphan"
+    )
+
+
+class ChiTietHoaDonDichVuPhatSinh(db.Model):
+    __tablename__ = "ct_hd_dv_phat_sinh"
+
+    MaCT = db.Column(db.Integer, primary_key=True)
+
+    MaHDPhatSinh = db.Column(
+        db.Integer,
+        ForeignKey("hoa_don_dv_phat_sinh.MaHDPhatSinh"),
+        nullable=False
+    )
+
+    MaDichVu = db.Column(
+        db.Integer,
+        ForeignKey("dich_vu.MaDichVu"),
+        nullable=False
+    )
+
+    SoLuong = db.Column(db.Integer, nullable=False, default=1)
+    ThanhTien = db.Column(DECIMAL(10, 2), nullable=False)
+
+    hoa_don_phat_sinh = relationship(
+        "HoaDonDichVuPhatSinh",
+        back_populates="chi_tiet"
+    )
+    dich_vu = relationship("DichVu")
+
+    def tinh_tien(self):
+        if self.dich_vu:
+            self.ThanhTien = self.SoLuong * self.dich_vu.DonGia

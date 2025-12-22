@@ -335,6 +335,7 @@ def cap_nhat_trang_thai_dat_phong(ma_dp, trang_thai):
         'CHO_XAC_NHAN',
         'DA_XAC_NHAN',
         'DANG_HAT',
+        'CHUA_THANH_TOAN',
         'DA_THANH_TOAN',
         'HUY'
     ]

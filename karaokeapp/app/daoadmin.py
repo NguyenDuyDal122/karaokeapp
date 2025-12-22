@@ -4,14 +4,32 @@ from app import db
 from app.models import *
 
 def thong_ke_doanh_thu_theo_nam():
-    return db.session.query(
-        func.year(HoaDon.NgayLap).label("nam"),
-        func.sum(HoaDon.TongTien).label("tong_tien")
-    ).group_by(
-        func.year(HoaDon.NgayLap)
-    ).order_by(
-        func.year(HoaDon.NgayLap)
-    ).all()
+    label = func.year(HoaDon.NgayLap)
+
+    hd = db.session.query(
+        label.label("nam"),
+        func.sum(HoaDon.TongTien)
+    ).group_by(label).all()
+
+    hdps = db.session.query(
+        label.label("nam"),
+        func.sum(HoaDonDichVuPhatSinh.TongTien)
+    ).join(
+        HoaDon,
+        HoaDon.MaHoaDon == HoaDonDichVuPhatSinh.MaHoaDon
+    ).filter(
+        HoaDonDichVuPhatSinh.TrangThai == "DA_THANH_TOAN"
+    ).group_by(label).all()
+
+    hd_dict = dict(hd)
+    hdps_dict = dict(hdps)
+
+    ket_qua = []
+    for nam in sorted(set(hd_dict) | set(hdps_dict)):
+        tong = (hd_dict.get(nam) or 0) + (hdps_dict.get(nam) or 0)
+        ket_qua.append((nam, tong))
+
+    return ket_qua
 
 # ===== TÀI KHOẢN =====
 def get_all_tai_khoan():
@@ -285,9 +303,18 @@ def thong_ke_doanh_thu_theo_thang():
 
 
 def tong_doanh_thu():
-    return db.session.query(
+    tong_hd = db.session.query(
         func.sum(HoaDon.TongTien)
     ).scalar() or 0
+
+    tong_hdps = db.session.query(
+        func.sum(HoaDonDichVuPhatSinh.TongTien)
+    ).filter(
+        HoaDonDichVuPhatSinh.TrangThai == "DA_THANH_TOAN"
+    ).scalar() or 0
+
+    return tong_hd + tong_hdps
+
 
 def thong_ke_doanh_thu(loai):
     if loai == "ngay":
@@ -297,10 +324,34 @@ def thong_ke_doanh_thu(loai):
     else:  # nam
         label = func.year(HoaDon.NgayLap)
 
-    return db.session.query(
+    # --- Doanh thu hóa đơn chính ---
+    hd_query = db.session.query(
         label.label("thoi_gian"),
-        func.sum(HoaDon.TongTien).label("tong_tien")
-    ).group_by(label).order_by(label).all()
+        func.sum(HoaDon.TongTien).label("tien_phong")
+    ).group_by(label)
+
+    # --- Doanh thu dịch vụ phát sinh (chỉ tính đã thanh toán) ---
+    hdps_query = db.session.query(
+        label.label("thoi_gian"),
+        func.sum(HoaDonDichVuPhatSinh.TongTien).label("tien_dv")
+    ).join(
+        HoaDon,
+        HoaDon.MaHoaDon == HoaDonDichVuPhatSinh.MaHoaDon
+    ).filter(
+        HoaDonDichVuPhatSinh.TrangThai == "DA_THANH_TOAN"
+    ).group_by(label)
+
+    # --- Gộp kết quả ---
+    hd_data = {tg: tien for tg, tien in hd_query.all()}
+    hdps_data = {tg: tien for tg, tien in hdps_query.all()}
+
+    ket_qua = []
+    for tg in sorted(set(hd_data) | set(hdps_data)):
+        tong = (hd_data.get(tg) or 0) + (hdps_data.get(tg) or 0)
+        ket_qua.append((tg, tong))
+
+    return ket_qua
+
 
 
 def tong_doanh_thu():

@@ -131,17 +131,12 @@
     <p>Chưa có dịch vụ nào được chọn.</p>
     {% endif %}
 
-    {% if session.role == 'nhanvien' %}
-    <label>Phương thức thanh toán:</label>
-    <select name="phuong_thuc_tt" required>
-        <option value="TIEN_MAT">Tiền mặt</option>
-        <option value="CHUYEN_KHOAN">Chuyển khoản</option>
-    </select>
+    {% if session.role == 'khachhang' %}
+    <button type="submit">✅ Thanh toán</button>
+    {% else %}
+    <button type="submit">📌 Lưu đặt phòng</button>
     {% endif %}
 
-
-    <!-- Nút thanh toán -->
-    <button type="submit" name="thanh_toan" value="1">✅ Thanh toán</button>
 </form>
 
 <br>

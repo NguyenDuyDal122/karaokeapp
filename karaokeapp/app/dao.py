@@ -38,7 +38,7 @@ def get_phong_thuong():
 
 
 # =========================
-# ĐẶT PHÒNG DAO
+# INDEX DAO
 # =========================
 
 def cap_nhat_trang_thai_dat_phong():
@@ -46,10 +46,16 @@ def cap_nhat_trang_thai_dat_phong():
     tat_ca_dat = DatPhong.query.filter(DatPhong.TrangThai != "HUY").all()
 
     for dat in tat_ca_dat:
+
+        # 🎤 Đang hát
         if dat.ThoiGianBatDau <= now <= dat.ThoiGianKetThuc:
             dat.TrangThai = "DANG_HAT"
+
+        # ⏹️ Hát xong
         elif now > dat.ThoiGianKetThuc:
-            dat.TrangThai = "DA_THANH_TOAN"
+            # ❗ CHỈ đổi nếu CHƯA thanh toán
+            if dat.TrangThai != "DA_THANH_TOAN":
+                dat.TrangThai = "CHUA_THANH_TOAN"
 
     db.session.commit()
 
@@ -59,6 +65,33 @@ def phong_dang_hat(ma_phong):
         TrangThai="DANG_HAT"
     ).first()
 
+def cap_nhat_trang_thai_dat_phong():
+    now = datetime.now()
+
+    tat_ca_dat = DatPhong.query.filter(
+        DatPhong.TrangThai.notin_(["HUY", "DA_THANH_TOAN"])
+    ).all()
+
+    for dat in tat_ca_dat:
+
+        # 🎤 Đang hát
+        if dat.ThoiGianBatDau <= now <= dat.ThoiGianKetThuc:
+            if dat.TrangThai in ["DA_XAC_NHAN", "CHO_XAC_NHAN"]:
+                dat.TrangThai = "DANG_HAT"
+
+        # ⏹️ Hát xong
+        elif now > dat.ThoiGianKetThuc:
+            if dat.TrangThai == "DANG_HAT":
+
+                # 🔹 KHÁCH ONLINE → đã thanh toán sẵn
+                if dat.hoa_don and dat.hoa_don.Nguon == "ONLINE":
+                    dat.TrangThai = "DA_THANH_TOAN"
+
+                # 🔹 NHÂN VIÊN đặt → chưa thu tiền
+                else:
+                    dat.TrangThai = "CHUA_THANH_TOAN"
+
+    db.session.commit()
 
 # =========================
 # REGISTER DAO
@@ -150,7 +183,7 @@ def get_lich_dat_phong_hop_le(ma_phong):
     """
     return DatPhong.query.filter(
         DatPhong.MaPhong == ma_phong,
-        DatPhong.TrangThai.notin_(["HUY", "DA_THANH_TOAN"])
+        DatPhong.TrangThai.notin_(["HUY", "DA_THANH_TOAN", "CHUA_THANH_TOAN"])
     ).order_by(DatPhong.ThoiGianBatDau.asc()).all()
 
 # =========================
@@ -179,13 +212,14 @@ def kiem_tra_xung_dot_gio(ma_phong, tg_bd, tg_kt):
     ).first()
 
 
-def tao_dat_phong(ma_phong, ma_kh, tg_bd, tg_kt, so_nguoi):
+def tao_dat_phong(ma_phong, ma_kh, tg_bd, tg_kt, so_nguoi, trang_thai):
     dp = DatPhong(
         MaPhong=ma_phong,
         MaKhachHang=ma_kh,
         ThoiGianBatDau=tg_bd,
         ThoiGianKetThuc=tg_kt,
-        SoNguoi=so_nguoi
+        SoNguoi=so_nguoi,
+        TrangThai=trang_thai   # ✅ GÁN RÕ
     )
     db.session.add(dp)
     db.session.commit()
@@ -224,29 +258,38 @@ def tao_hoa_don(dp, room, session, phuong_thuc_tt):
     ma_nv = xac_dinh_nhan_vien_lap_hoa_don(session)
     nguon = "QUAY" if session.get("role") == "nhanvien" else "ONLINE"
 
+    tong_tien_truoc_giam = Decimal(room.GiaGio) * so_gio + tien_dv
+
+    # 🎯 XÁC ĐỊNH GIẢM GIÁ
+    giam_gia = Decimal("0.00")
+    kh = dp.khach_hang
+
+    if kh:
+        # ✅ TĂNG LƯỢT TRƯỚC
+        kh.SoLuotDatThang = (kh.SoLuotDatThang or 0) + 1
+
+        # 🎯 NẾU ĐỦ 10 → GIẢM NGAY LẦN NÀY
+        if kh.SoLuotDatThang == 10:
+            giam_gia = tong_tien_truoc_giam * Decimal("0.05")  # 5%
+            kh.SoLuotDatThang = 0  # RESET CHU KỲ
+
     # 1️⃣ Tạo hóa đơn
     hd = HoaDon(
         MaDatPhong=dp.MaDatPhong,
         TienPhong=Decimal(room.GiaGio) * so_gio,
         TienDichVu=tien_dv,
+        GiamGia=giam_gia,
         PhuongThucThanhToan=phuong_thuc_tt,
         Nguon=nguon,
-        MaNhanVien=ma_nv,
-        GiamGia=Decimal("0.00")
+        MaNhanVien=ma_nv
     )
 
     hd.tinh_tong_tien()
     db.session.add(hd)
 
-    # 3️⃣ Cộng lượt đặt tháng cho khách hàng
-    kh = dp.khach_hang
-    if kh:
-        kh.SoLuotDatThang = (kh.SoLuotDatThang or 0) + 1
-
-    # 4️⃣ Commit 1 lần
     db.session.commit()
-
     return hd
+
 
 def kiem_tra_thoi_gian_hop_le(tg_bd, tg_kt):
     now = datetime.now()

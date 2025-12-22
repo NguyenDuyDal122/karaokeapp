@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết đặt phòng{% endblock %}
+
+{% block content %}
+
+<h2 style="text-align:center;color:#007BFF;">
+    📋 Chi tiết đặt phòng
+</h2>
+
+<hr>
+
+<h4>🎤 Thông tin phòng</h4>
+<ul>
+    <li><b>Tên phòng:</b> {{ dp.phong.TenPhong }}</li>
+    <li><b>Sức chứa:</b> {{ dp.phong.SucChua }} người</li>
+    <li><b>Giá giờ:</b> {{ dp.phong.GiaGio }} đ</li>
+</ul>
+
+<h4>👤 Thông tin khách hàng</h4>
+<ul>
+    <li><b>Họ tên:</b> {{ dp.khach_hang.HoTen }}</li>
+    <li><b>SĐT:</b> {{ dp.khach_hang.SoDienThoai }}</li>
+</ul>
+
+<h4>⏰ Thời gian</h4>
+<ul>
+    <li><b>Bắt đầu:</b> {{ dp.ThoiGianBatDau }}</li>
+    <li><b>Kết thúc:</b> {{ dp.ThoiGianKetThuc }}</li>
+    <li><b>Số người:</b> {{ dp.SoNguoi }}</li>
+</ul>
+
+<h4>🛎️ Dịch vụ đã gọi</h4>
+
+{% if dp.chi_tiet_dv %}
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <tr style="background:#f1f1f1">
+        <th>Tên dịch vụ</th>
+        <th>Số lượng</th>
+        <th>Đơn giá</th>
+        <th>Thành tiền</th>
+    </tr>
+    {% for ct in dp.chi_tiet_dv %}
+    <tr>
+        <td>{{ ct.dich_vu.TenDichVu }}</td>
+        <td align="center">{{ ct.SoLuong }}</td>
+        <td align="right">{{ ct.dich_vu.DonGia }} đ</td>
+        <td align="right">{{ ct.ThanhTien }} đ</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>Chưa gọi dịch vụ nào.</p>
+{% endif %}
+
+<hr>
+
+<div style="display:flex; gap:15px; margin-top:20px;">
+
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+        ⬅ Quay về trang chủ
+    </a>
+</div>
+
+{% endblock %}
