@@ -77,6 +77,7 @@
 
     <div class="navbar-right">
         {% if session.user %}
+        <a href="{{ url_for('index') }}">Trang chủ</a>
         {% if session.get('role') == 'khachhang' %}
         <a href="{{ url_for('thong_tin_tai_khoan') }}">Thông tin tài khoản</a>
         {% elif session.get('role') == 'nhanvien' %}

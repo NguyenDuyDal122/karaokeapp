@@ -1,6 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
 from os import abort
+
+import paypalrestsdk
 from flask import make_response
 from app import app, dao, db
 from app.models import PhongHat, ChiTietDatDichVu, HoaDon, DatPhong, DichVu, KhachHang, TaiKhoan, NhanVien, \
@@ -89,6 +91,7 @@ def logout():
 
 @app.route("/phong/<int:ma_phong>")
 def chi_tiet_phong(ma_phong):
+    dao.cap_nhat_trang_thai_dat_phong()
 
     room = dao.get_phong_by_id(ma_phong)
     if not room:
@@ -105,6 +108,7 @@ def chi_tiet_phong(ma_phong):
 
 @app.route("/dat-phong/<int:ma_phong>", methods=["GET", "POST"])
 def dat_phong(ma_phong):
+    dao.cap_nhat_trang_thai_dat_phong()
 
     # --- Kiểm tra đăng nhập ---
     if "user" not in session or session.get("role") not in ["khachhang", "nhanvien"]:
@@ -185,21 +189,17 @@ def dat_phong(ma_phong):
             # khách hàng online luôn chuyển khoản
             phuong_thuc_tt = "CHUYEN_KHOAN"
 
-        # --- KHÁCH HÀNG: tạo hóa đơn ngay ---
         if session.get("role") == "khachhang":
-            hoa_don = dao.tao_hoa_don(
-                dp,
-                room,
-                session,
-                phuong_thuc_tt="CHUYEN_KHOAN"
+            # lưu tạm ma_dat_phong để sau MoMo dùng
+            session["cho_thanh_toan_dp"] = dp.MaDatPhong
+
+            pay_url = dao.paypal_create_payment(
+                ma_dat_phong=dp.MaDatPhong,
+                so_tien=dao.tinh_tong_tien_tam(dp),
+                return_endpoint="paypal_success",
+                cancel_endpoint="paypal_cancel"
             )
-
-            # --- Dọn session ---
-            session.pop("selected_services", None)
-            session.pop("dat_phong_info", None)
-            session.pop("khachhang_dat_phong", None)
-
-            return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+            return redirect(pay_url)
 
         # --- NHÂN VIÊN: CHỈ ĐẶT PHÒNG ---
         flash("✅ Đặt phòng thành công. Khách sẽ thanh toán sau khi hát xong.", "success")
@@ -218,6 +218,76 @@ def dat_phong(ma_phong):
         dat_phong_info=dat_phong_info,
         back_url=url_for("dat_phong", ma_phong=room.MaPhong)
     )
+
+@app.route("/paypal-success")
+def paypal_success():
+    payment_id = request.args.get("paymentId")
+    payer_id = request.args.get("PayerID")
+
+    if not payment_id or not payer_id:
+        flash("❌ Thiếu thông tin thanh toán PayPal!", "danger")
+        return redirect(url_for("ds_phong"))
+
+    # 1️⃣ Xác thực PayPal
+    payment = paypalrestsdk.Payment.find(payment_id)
+
+    if not payment.execute({"payer_id": payer_id}):
+        flash("❌ Thanh toán PayPal thất bại!", "danger")
+        return redirect(url_for("ds_phong"))
+
+    # 2️⃣ Lấy mã đặt phòng từ SKU
+    try:
+        sku = payment.transactions[0].item_list.items[0].sku
+        ma_dat_phong = int(sku.replace("DP", ""))
+    except Exception:
+        flash("❌ Không xác định được đơn đặt phòng!", "danger")
+        return redirect(url_for("ds_phong"))
+
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
+
+    # 3️⃣ Tạo hóa đơn QUA DAO (DAO sẽ tự gán MaNhanVien = ADMIN)
+    hoa_don = dao.tao_hoa_don(
+        dp=dp,
+        room=dp.phong,
+        session=session,
+        phuong_thuc_tt="CHUYEN_KHOAN"
+    )
+
+    # 4️⃣ Cập nhật trạng thái đặt phòng
+    dp.TrangThai = "CHO_XAC_NHAN"
+
+    db.session.commit()
+
+    # 5️⃣ Dọn session
+    session.pop("cho_thanh_toan_dp", None)
+    session.pop("selected_services", None)
+    session.pop("dat_phong_info", None)
+
+    return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+
+@app.route("/paypal-cancel")
+def paypal_cancel():
+    ma_dat_phong = session.get("cho_thanh_toan_dp")
+
+    if not ma_dat_phong:
+        flash("❌ Không tìm thấy đơn đặt phòng để hủy!", "danger")
+        return redirect(url_for("ds_phong"))
+
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
+
+    # ✅ Cập nhật trạng thái
+    dp.TrangThai = "HUY"
+
+    db.session.commit()
+
+    # ✅ Dọn session
+    session.pop("cho_thanh_toan_dp", None)
+    session.pop("selected_services", None)
+    session.pop("dat_phong_info", None)
+
+    return redirect(url_for("index"))
+
 
 @app.route("/thanh-toan-phong")
 def thanh_toan_phong():
@@ -251,29 +321,99 @@ def lap_hoa_don(ma_dat_phong):
         flash("Phương thức thanh toán không hợp lệ!", "danger")
         return redirect(url_for("thanh_toan_phong"))
 
-    room = dp.phong
+    # ==========================
+    # 💵 THANH TOÁN TIỀN MẶT
+    # ==========================
+    if phuong_thuc_tt == "TIEN_MAT":
+        hoa_don = dao.tao_hoa_don(
+            dp=dp,
+            room=dp.phong,
+            session=session,
+            phuong_thuc_tt="TIEN_MAT"
+        )
+
+        dp.TrangThai = "DA_THANH_TOAN"
+
+        # dịch vụ phát sinh -> đã thanh toán
+        for hdps in hoa_don.hoa_don_phat_sinh:
+            hdps.TrangThai = "DA_THANH_TOAN"
+
+        db.session.commit()
+
+        flash("✅ Thanh toán tiền mặt thành công!", "success")
+        return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+    # ==========================
+    # 🌐 THANH TOÁN ONLINE PAYPAL
+    # ==========================
+    else:
+        # lưu để callback paypal dùng
+        session["nv_paypal_dp"] = dp.MaDatPhong
+
+        pay_url = dao.paypal_create_payment(
+            ma_dat_phong=dp.MaDatPhong,
+            so_tien=dao.tinh_tong_tien_tam(dp),
+            return_endpoint="paypal_success_nv",
+            cancel_endpoint="thanh_toan_phong"
+        )
+
+        if not pay_url:
+            flash("❌ Không tạo được thanh toán PayPal!", "danger")
+            return redirect(url_for("thanh_toan_phong"))
+
+        return redirect(pay_url)
+
+@app.route("/paypal-success-nv")
+def paypal_success_nv():
+    payment_id = request.args.get("paymentId")
+    payer_id = request.args.get("PayerID")
+
+    if not payment_id or not payer_id:
+        flash("❌ Thiếu thông tin PayPal!", "danger")
+        return redirect(url_for("thanh_toan_phong"))
+
+    payment = paypalrestsdk.Payment.find(payment_id)
+
+    if not payment.execute({"payer_id": payer_id}):
+        flash("❌ Thanh toán PayPal thất bại!", "danger")
+        return redirect(url_for("thanh_toan_phong"))
+
+    ma_dat_phong = session.get("nv_paypal_dp")
+    if not ma_dat_phong:
+        flash("❌ Không tìm thấy đặt phòng!", "danger")
+        return redirect(url_for("thanh_toan_phong"))
+
+    dp = DatPhong.query.get_or_404(ma_dat_phong)
 
     hoa_don = dao.tao_hoa_don(
         dp=dp,
-        room=room,
+        room=dp.phong,
         session=session,
-        phuong_thuc_tt=phuong_thuc_tt
+        phuong_thuc_tt="CHUYEN_KHOAN"
     )
 
-    # Đã thanh toán phòng
     dp.TrangThai = "DA_THANH_TOAN"
 
-    # ✅ Đã thanh toán toàn bộ dịch vụ phát sinh
     for hdps in hoa_don.hoa_don_phat_sinh:
         hdps.TrangThai = "DA_THANH_TOAN"
 
     db.session.commit()
 
+    session.pop("nv_paypal_dp", None)
+
+    flash("✅ Thanh toán online thành công!", "success")
     return redirect(url_for("xem_hoa_don", ma_hoa_don=hoa_don.MaHoaDon))
+
+@app.route("/paypal-cancel-nv")
+def paypal_cancel_nv():
+    session.pop("nv_paypal_dp", None)
+    flash("❌ Đã hủy thanh toán PayPal", "warning")
+    return redirect(url_for("thanh_toan_phong"))
 
 
 @app.route("/dat-phong/<int:ma_dat_phong>/chi-tiet")
 def chi_tiet_dat_phong(ma_dat_phong):
+    dao.cap_nhat_trang_thai_dat_phong()
     dp = DatPhong.query.get_or_404(ma_dat_phong)
 
     # Chỉ nhân viên được xem màn này
@@ -371,6 +511,7 @@ def xuat_hoa_don_pdf(ma_hoa_don):
 
 @app.route("/thong-tin-tai-khoan")
 def thong_tin_tai_khoan():
+    dao.cap_nhat_trang_thai_dat_phong()
 
     if "user" not in session or session.get("role", "").lower() != "khachhang":
         flash("Vui lòng đăng nhập bằng tài khoản khách hàng để xem thông tin tài khoản.", "warning")
@@ -390,6 +531,7 @@ def thong_tin_tai_khoan():
 
 @app.route("/thong-tin-nhan-vien")
 def thong_tin_nhan_vien():
+    dao.cap_nhat_trang_thai_dat_phong()
 
     if "user" not in session or session.get("role") != "nhanvien":
         flash("Bạn phải đăng nhập bằng tài khoản nhân viên.", "warning")
@@ -524,6 +666,7 @@ def chon_dich_vu_phat_sinh(ma_dat_phong):
 
 @app.route("/nhan-vien/phong-dang-hat")
 def phong_dang_hat():
+    dao.cap_nhat_trang_thai_dat_phong()
     if session.get("role") != "nhanvien":
         flash("Không có quyền", "danger")
         return redirect(url_for("index"))
@@ -617,20 +760,72 @@ def thanh_toan_dv_phat_sinh(ma_hdps):
         return redirect(url_for("index"))
 
     hdps = HoaDonDichVuPhatSinh.query.get_or_404(ma_hdps)
+    dp = hdps.hoa_don.dat_phong
+    dao.cap_nhat_trang_thai_dat_phong()
 
     if request.method == "POST":
         phuong_thuc = request.form.get("phuong_thuc_tt")
 
-        hdps.TrangThai = "DA_THANH_TOAN"
-        db.session.commit()
+        # ====== THANH TOÁN TIỀN MẶT ======
+        if phuong_thuc == "TIEN_MAT":
+            hdps.TrangThai = "DA_THANH_TOAN"
+            db.session.commit()
+            flash("✅ Thanh toán tiền mặt thành công", "success")
+            return redirect(url_for("phong_dang_hat", ma_hdps=hdps.MaHDPhatSinh))
 
-        flash("✅ Thanh toán dịch vụ phát sinh thành công", "success")
+        # ====== THANH TOÁN ONLINE PAYPAL ======
+        elif phuong_thuc == "CHUYEN_KHOAN":
+            # lưu session để callback Paypal xử lý
+            session["nv_paypal_hdps"] = hdps.MaHDPhatSinh
+            so_tien = hdps.TongTien
+            pay_url = dao.paypal_create_payment(
+                ma_dat_phong=dp.MaDatPhong,
+                so_tien=so_tien,
+                return_endpoint="paypal_success_dv_nv",
+                cancel_endpoint="paypal_cancel_dv_nv"
+            )
+            if not pay_url:
+                flash("❌ Không tạo được thanh toán PayPal!", "danger")
+                return redirect(url_for("thanh_toan_dv_phat_sinh", ma_hdps=hdps.MaHDPhatSinh))
+            return redirect(pay_url)
+
+    return render_template("thanh_toan_dv_phat_sinh.html", hdps=hdps)
+
+
+@app.route("/paypal-success-dv-nv")
+def paypal_success_dv_nv():
+    payment_id = request.args.get("paymentId")
+    payer_id = request.args.get("PayerID")
+
+    if not payment_id or not payer_id:
+        flash("❌ Thiếu thông tin PayPal!", "danger")
         return redirect(url_for("phong_dang_hat"))
 
-    return render_template(
-        "thanh_toan_dv_phat_sinh.html",
-        hdps=hdps
-    )
+    payment = paypalrestsdk.Payment.find(payment_id)
+
+    if not payment.execute({"payer_id": payer_id}):
+        flash("❌ Thanh toán PayPal thất bại!", "danger")
+        return redirect(url_for("phong_dang_hat"))
+
+    ma_hdps = session.get("nv_paypal_hdps")
+    if not ma_hdps:
+        flash("❌ Không tìm thấy hóa đơn dịch vụ!", "danger")
+        return redirect(url_for("phong_dang_hat"))
+
+    hdps = HoaDonDichVuPhatSinh.query.get_or_404(ma_hdps)
+    hdps.TrangThai = "DA_THANH_TOAN"
+    db.session.commit()
+    session.pop("nv_paypal_hdps", None)
+
+    flash("✅ Thanh toán Paypal thành công!", "success")
+    return redirect(url_for("phong_dang_hat", ma_hdps=hdps.MaHDPhatSinh))
+
+@app.route("/paypal-cancel-dv-nv")
+def paypal_cancel_dv_nv():
+    session.pop("nv_paypal_hdps", None)
+    flash("❌ Đã hủy thanh toán PayPal dịch vụ", "warning")
+    return redirect(url_for("phong_dang_hat"))
+
 
 
 

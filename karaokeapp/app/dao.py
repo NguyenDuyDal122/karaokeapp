@@ -1,8 +1,24 @@
+import hashlib
+import hmac
+import urllib
+import uuid
+from urllib import response
+
+import paypalrestsdk
+import requests
+from flask import url_for
+
 from app import db
 from app.models import TaiKhoan, PhongHat, DatPhong, KhachHang
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 from sqlalchemy import or_
+
+paypalrestsdk.configure({
+    "mode": "sandbox",  # sandbox | live
+    "client_id": "Afxqgjj0Ed2LIcj15oL0ZaFVzuQzArKqligTqzSs6PKwIIU1-peSQkMASKZlC36HiYniZeaWrqchUcDF",
+    "client_secret": "EGtIMIzjEgKPj4B_vi5AmEHGn8b8bVsZHgSXzLZLGsKNrZ8mlKiwJKSUsHvmm9bPvhCE3MrSdGvfs7E0"
+})
 
 # =========================
 # AUTH / LOGIN DAO
@@ -205,8 +221,11 @@ def get_phong_or_404(ma_phong):
 
 
 def kiem_tra_xung_dot_gio(ma_phong, tg_bd, tg_kt):
+    trang_thai_chan = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "DANG_HAT"]
+
     return DatPhong.query.filter(
         DatPhong.MaPhong == ma_phong,
+        DatPhong.TrangThai.in_(trang_thai_chan),  # ✅ CHỈ CHẶN CÁC TRẠNG THÁI NÀY
         DatPhong.ThoiGianBatDau < tg_kt,
         DatPhong.ThoiGianKetThuc > tg_bd
     ).first()
@@ -433,4 +452,55 @@ def tao_khach_hang(ho_ten, so_dt, email):
     db.session.add(kh)
     db.session.commit()
     return kh
+
+# =========================
+# PAYPAL DAO
+# =========================
+
+def paypal_create_payment(ma_dat_phong, so_tien, return_endpoint, cancel_endpoint):
+    payment = paypalrestsdk.Payment({
+        "intent": "sale",
+        "payer": {"payment_method": "paypal"},
+        "redirect_urls": {
+            "return_url": url_for(return_endpoint, _external=True),
+            "cancel_url": url_for(cancel_endpoint, _external=True)
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": f"Thanh toán phòng #{ma_dat_phong}",
+                    "sku": f"DP{ma_dat_phong}",
+                    "price": f"{float(so_tien):.2f}",
+                    "currency": "USD",
+                    "quantity": 1
+                }]
+            },
+            "amount": {
+                "total": f"{float(so_tien):.2f}",
+                "currency": "USD"
+            },
+            "description": "Thanh toán phòng karaoke"
+        }]
+    })
+
+    if payment.create():
+        for link in payment.links:
+            if link.rel == "approval_url":
+                return link.href
+    return None
+
+
+def tinh_tong_tien_tam(dp: DatPhong):
+    # tiền phòng
+    thoi_gian = (dp.ThoiGianKetThuc - dp.ThoiGianBatDau).total_seconds() / 3600
+    tien_phong = Decimal(thoi_gian) * dp.phong.GiaGio
+
+    # tiền dịch vụ
+    tien_dv = Decimal('0')
+    for ct in dp.chi_tiet_dv:
+        tien_dv += ct.ThanhTien
+
+    return tien_phong + tien_dv
+
+
 

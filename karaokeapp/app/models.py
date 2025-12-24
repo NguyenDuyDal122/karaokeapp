@@ -73,10 +73,6 @@ class DatPhong(db.Model):
         default='CHO_XAC_NHAN'
     )
 
-    __table_args__ = (
-        UniqueConstraint("MaPhong", "ThoiGianBatDau", "ThoiGianKetThuc", name="unique_phong_thoigian"),
-    )
-
     khach_hang = relationship("KhachHang", back_populates="dat_phong")
     phong = relationship("PhongHat", back_populates="dat_phong")
     chi_tiet_dv = relationship("ChiTietDatDichVu", back_populates="dat_phong")
